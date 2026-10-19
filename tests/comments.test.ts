@@ -115,3 +115,33 @@ test("extractCommentsFromLines - handles multi-line blocks", () => {
   assert.deepEqual(result[0].comment, "block start");
   assert.deepEqual(result[1].comment, "inner");
 });
+
+// --- String literals ---
+
+test("extractComment - ignores // inside string literals", () => {
+  assert.deepEqual(extractComment(`const url = "http://x";`, "foo.ts").comment, null);
+  assert.deepEqual(extractComment(`const url = 'https://example.com/a';`, "foo.ts").comment, null);
+  assert.deepEqual(extractComment("const url = `http://${host}/`;", "foo.ts").comment, null);
+});
+
+test("extractComment - finds comment after string containing //", () => {
+  const { comment } = extractComment(`fetch("http://x"); // real comment`, "foo.ts");
+  assert.deepEqual(comment, "real comment");
+});
+
+test("extractComment - handles escaped quotes in strings", () => {
+  const { comment } = extractComment(`const s = "say \\"//hi\\" ok"; // after escape`, "foo.ts");
+  assert.deepEqual(comment, "after escape");
+  assert.deepEqual(extractComment(`const s = 'it\\'s // not a comment';`, "foo.ts").comment, null);
+});
+
+test("extractComment - ignores /* inside string literals", () => {
+  const result = extractComment(`const glob = "src/*";`, "foo.ts");
+  assert.deepEqual(result.comment, null);
+  assert.deepEqual(result.block.active, false);
+});
+
+test("extractComment - ignores # inside string literals", () => {
+  assert.deepEqual(extractComment(`color = "#fff"`, "foo.py").comment, null);
+  assert.deepEqual(extractComment(`color = "#fff"  # hex value`, "foo.py").comment, "hex value");
+});

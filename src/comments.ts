@@ -112,7 +112,7 @@ export function extractComment(
 
   // Check block comment start
   if (style.blockStart && style.blockEnd) {
-    const bsIdx = trimmed.indexOf(style.blockStart);
+    const bsIdx = indexOutsideStrings(trimmed, style.blockStart);
     if (bsIdx !== -1 && (style.single.length === 0 || bsIdx <= firstSingleIdx(trimmed, style.single))) {
       const afterStart = trimmed.slice(bsIdx + style.blockStart.length);
       const endIdx = afterStart.indexOf(style.blockEnd);
@@ -135,7 +135,7 @@ export function extractComment(
 
   // Check single-line comments
   for (const marker of style.single) {
-    const idx = trimmed.indexOf(marker);
+    const idx = indexOutsideStrings(trimmed, marker);
     if (idx !== -1) {
       // Simple heuristic: if the marker appears at the start or after whitespace/code
       // For '#' in particular, skip shebang lines
@@ -148,10 +148,47 @@ export function extractComment(
   return { comment: null, block };
 }
 
+const QUOTES = new Set(["'", '"', "`"]);
+
+/**
+ * Find the first occurrence of `marker` in `line` that is not inside a
+ * single-, double-, or backtick-quoted string literal. Backslash escapes
+ * inside strings are honored. A quote with no closing quote on the same line
+ * is treated as an ordinary character (e.g. Rust lifetimes, Lisp quotes).
+ * Returns -1 if not found.
+ */
+function indexOutsideStrings(line: string, marker: string): number {
+  let i = 0;
+  while (i < line.length) {
+    if (line.startsWith(marker, i)) return i;
+    const ch = line[i];
+    if (QUOTES.has(ch)) {
+      const close = findClosingQuote(line, i + 1, ch);
+      if (close !== -1) {
+        i = close + 1;
+        continue;
+      }
+    }
+    i++;
+  }
+  return -1;
+}
+
+function findClosingQuote(line: string, from: number, quote: string): number {
+  for (let j = from; j < line.length; j++) {
+    if (line[j] === "\\") {
+      j++;
+      continue;
+    }
+    if (line[j] === quote) return j;
+  }
+  return -1;
+}
+
 function firstSingleIdx(line: string, markers: string[]): number {
   let min = Infinity;
   for (const m of markers) {
-    const idx = line.indexOf(m);
+    const idx = indexOutsideStrings(line, m);
     if (idx !== -1 && idx < min) min = idx;
   }
   return min;
