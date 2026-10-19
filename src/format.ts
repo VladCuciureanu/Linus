@@ -45,8 +45,6 @@ export function formatPretty(
   const inner = width - 4; // padding inside box
   const time = formatTime(comment.localHour, comment.localMinute);
   const date = formatDate(comment.date);
-  const header1 = `${time} · ${date} · @${comment.author}`;
-  const header2 = `${comment.hash} · ${comment.filePath}`;
   const commentLines = wordWrap(comment.comment, inner);
 
   const top = `┌${"─".repeat(width - 2)}┐`;
@@ -60,13 +58,12 @@ export function formatPretty(
   const h2 = c(DIM, `${comment.hash} · ${comment.filePath}`, useColor);
 
   const lines = [top];
-  lines.push(`│ ${pad(h1, inner + (h1.length - header1.length))} │`);
-  lines.push(`│ ${pad(h2, inner + (h2.length - header2.length))} │`);
+  lines.push(`│ ${pad(h1, inner)} │`);
+  lines.push(`│ ${pad(h2, inner)} │`);
   lines.push(mid);
   for (const cl of commentLines) {
     const styled = c(WHITE + BOLD, `"${cl}"`, useColor);
-    const raw = `"${cl}"`;
-    lines.push(`│ ${pad(styled, inner + (styled.length - raw.length))} │`);
+    lines.push(`│ ${pad(styled, inner)} │`);
   }
   lines.push(bot);
 

@@ -62,3 +62,15 @@ test("formatStats - computes correct stats", () => {
   assert.ok(output.includes("Alice"));
   assert.ok(output.includes("2:00"));
 });
+
+test("formatPretty - colored card lines have equal visible width", () => {
+  const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
+  const output = formatPretty(
+    makeComment({ comment: "a long late-night comment that should wrap across more than one line of the card body" }),
+    true,
+  );
+  assert.ok(output.includes("\x1b["), "expected ANSI codes in colored output");
+  const widths = output.split("\n").map((l) => [...stripAnsi(l)].length);
+  assert.ok(widths.length > 5);
+  for (const w of widths) assert.equal(w, widths[0]);
+});
