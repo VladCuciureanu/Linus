@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import type { CliOptions, LateNightComment } from "./types.ts";
 import { readGitLog } from "./git.ts";
 import { getExtension } from "./diff.ts";
@@ -121,7 +122,7 @@ function parseArgs(args: string[]): CliOptions {
       default:
         if (arg.startsWith("-")) {
           console.error(`Unknown option: ${arg}`);
-          Deno.exit(1);
+          process.exit(1);
         }
         opts.repoPath = arg;
     }
@@ -129,7 +130,7 @@ function parseArgs(args: string[]): CliOptions {
   }
 
   // Respect NO_COLOR env var
-  if (Deno.env.get("NO_COLOR") !== undefined) {
+  if (process.env.NO_COLOR !== undefined) {
     opts.noColor = true;
   }
 
@@ -137,7 +138,7 @@ function parseArgs(args: string[]): CliOptions {
 }
 
 async function run() {
-  const opts = parseArgs(Deno.args);
+  const opts = parseArgs(process.argv.slice(2));
 
   if (opts.help) {
     console.log(HELP);
@@ -149,7 +150,7 @@ async function run() {
     return;
   }
 
-  const useColor = !opts.noColor && Deno.stdout.isTerminal();
+  const useColor = !opts.noColor && process.stdout.isTTY === true;
   const allComments: LateNightComment[] = [];
 
   try {
@@ -219,7 +220,7 @@ async function run() {
     } else {
       console.error(`Error: ${err}`);
     }
-    Deno.exit(1);
+    process.exitCode = 1;
   }
 }
 

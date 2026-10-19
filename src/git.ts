@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import type { CommitDiff, CommitMeta } from "./types.ts";
 import { parseDiff } from "./diff.ts";
 import { parseAuthorDate } from "./filter.ts";
@@ -36,15 +37,20 @@ export async function* readGitLog(
   if (opts.since) args.push(`--since=${opts.since}`);
   if (opts.until) args.push(`--until=${opts.until}`);
 
-  const cmd = new Deno.Command("git", {
-    args,
-    stdout: "piped",
-    stderr: "piped",
-  });
+  const child = spawn("git", args, { stdio: ["ignore", "pipe", "pipe"] });
+  child.stdout.setEncoding("utf8");
+  child.stderr.setEncoding("utf8");
 
-  const process = cmd.spawn();
-  const reader = process.stdout.getReader();
-  const decoder = new TextDecoder();
+  let stderrText = "";
+  child.stderr.on("data", (chunk: string) => {
+    stderrText += chunk;
+  });
+  const exitCode = new Promise<number | null>((resolve, reject) => {
+    child.on("error", reject);
+    child.on("close", resolve);
+  });
+  // Mark as handled now; the rejection is surfaced when awaited below.
+  exitCode.catch(() => {});
 
   let buffer = "";
   let currentMeta: CommitMeta | null = null;
@@ -73,10 +79,8 @@ export async function* readGitLog(
   }
 
   try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
+    for await (const chunk of child.stdout) {
+      buffer += chunk as string;
 
       const lines = buffer.split("\n");
       // Keep the last incomplete line in the buffer
@@ -116,11 +120,8 @@ export async function* readGitLog(
     const commit = flushCommit();
     if (commit) yield commit;
   } finally {
-    reader.releaseLock();
-    // Consume stderr to avoid resource leaks
-    const stderrText = await new Response(process.stderr).text();
-    const status = await process.status;
-    if (!status.success) {
+    const code = await exitCode;
+    if (code !== 0) {
       throw new Error(`git log failed: ${stderrText.trim()}`);
     }
   }

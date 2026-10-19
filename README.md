@@ -14,26 +14,24 @@
 
 ## Install
 
-**Requirements:** [Deno](https://deno.com/) and `git`.
+**Requirements:** [Node.js](https://nodejs.org/) 24 or newer and `git`.
 
 ### Run from source
 
 ```sh
-deno run --allow-run=git --allow-read --allow-env src/main.ts [OPTIONS] [path]
-```
-
-### Compile to binary
-
-```sh
-deno task compile
-./linus [OPTIONS] [path]
+npm install
+node src/main.ts [OPTIONS] [path]
 ```
 
 ### Install globally
 
 ```sh
-deno install --allow-run=git --allow-read --allow-env -n linus src/main.ts
+npm install
+npm install -g .   # or: npm link
+linus [OPTIONS] [path]
 ```
+
+`npm install` builds the `linus` executable into `dist/` (via the `prepare` script); run `npm run build` to rebuild it manually.
 
 ## Usage
 
@@ -112,11 +110,11 @@ TypeScript, JavaScript, Python, Go, Rust, Ruby, C, C++, Java, Kotlin, Swift, Sca
 
 ```sh
 # Run tests
-deno task test
+npm test
 
 # Type-check
-deno task check
+npm run typecheck
 
-# Run in dev mode
-deno task dev [OPTIONS] [path]
+# Run from source
+npm start -- [OPTIONS] [path]
 ```
