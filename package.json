@@ -1,6 +1,6 @@
 {
   "name": "linus",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "license": "MIT",
   "description": "The 3AM comment finder: finds code comments written between midnight and 4 AM across a repo's history.",

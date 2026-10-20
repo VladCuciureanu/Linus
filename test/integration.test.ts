@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { cp, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, test } from "node:test";
@@ -149,7 +149,8 @@ test("integration - --stats flag", async () => {
 test("integration - --help", async () => {
   const { stdout, code } = await runLinus(["--help"]);
   assert.deepEqual(code, 0);
-  assert.ok(stdout.includes("linus v0.1.0"));
+  const pkg = JSON.parse(await readFile(join(import.meta.dirname, "..", "package.json"), "utf8"));
+  assert.ok(stdout.includes(`linus v${pkg.version}`));
   assert.ok(stdout.includes("USAGE:"));
 });
 
