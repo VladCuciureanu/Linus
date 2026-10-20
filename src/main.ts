@@ -51,7 +51,7 @@ function parseHHMM(s: string): { hour: number; minute: number } {
   if (!match) throw new Error(`Invalid time format: "${s}" (expected HH:MM)`);
   const hour = parseInt(match[1], 10);
   const minute = parseInt(match[2], 10);
-  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+  if (hour > 23 || minute > 59) {
     throw new Error(`Invalid time: "${s}"`);
   }
   return { hour, minute };
