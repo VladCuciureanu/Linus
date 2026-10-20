@@ -37,6 +37,13 @@ function wordWrap(text: string, width: number): string[] {
   return lines;
 }
 
+/** Cut `text` to at most `max` code points, ending in "…" when shortened. */
+function truncate(text: string, max: number): string {
+  const chars = [...text];
+  if (chars.length <= max) return text;
+  return `${chars.slice(0, Math.max(0, max - 1)).join("")}…`;
+}
+
 /** Pretty-print a single comment as a box card. */
 export function formatPretty(comment: LateNightComment, useColor: boolean): string {
   const width = 55;
@@ -54,11 +61,14 @@ export function formatPretty(comment: LateNightComment, useColor: boolean): stri
   const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
   const pad = (s: string, w: number) => s + " ".repeat(Math.max(0, w - stripAnsi(s).length));
 
+  // Header fields are cut with an ellipsis so each line fits inside the box.
+  const h1Prefix = `${time} · ${date} · @`;
+  const author = truncate(comment.author, inner - h1Prefix.length);
   const h1 =
     paint(BOLD + CYAN, time, useColor) +
     paint(DIM, ` · ${date} · `, useColor) +
-    paint(YELLOW, `@${comment.author}`, useColor);
-  const h2 = paint(DIM, `${comment.hash} · ${comment.filePath}`, useColor);
+    paint(YELLOW, `@${author}`, useColor);
+  const h2 = paint(DIM, truncate(`${comment.hash} · ${comment.filePath}`, inner), useColor);
 
   const lines = [top];
   lines.push(`│ ${pad(h1, inner)} │`);

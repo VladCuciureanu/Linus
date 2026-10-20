@@ -106,6 +106,28 @@ test("formatPretty - full-width quoted comment lines stay inside the box", () =>
   for (const w of widths) assert.equal(w, widths[0], output);
 });
 
+test("formatPretty - long header fields are truncated with an ellipsis to fit the box", () => {
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: matches ANSI escape sequences
+  const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
+  const longAuthor = `Bartholomew ${"Q".repeat(60)} Featherstonehaugh`;
+  const longPath = `src/${"deeply/nested/".repeat(8)}module.ts`;
+  for (const color of [false, true]) {
+    const output = formatPretty(makeComment({ author: longAuthor, filePath: longPath }), color);
+    const lines = output.split("\n").map(stripAnsi);
+    const widths = lines.map((l) => [...l].length);
+    for (const w of widths) assert.equal(w, widths[0], lines.join("\n"));
+    assert.match(lines[1], /@Bartholomew Q+…\s*│$/);
+    assert.match(lines[2], /abc1234 · src\/deeply\/.*…\s*│$/);
+  }
+});
+
+test("formatPretty - short header fields are not truncated", () => {
+  const output = formatPretty(makeComment({ author: "Alice", filePath: "src/a.ts" }), false);
+  assert.ok(output.includes("@Alice "), output);
+  assert.ok(output.includes("abc1234 · src/a.ts "), output);
+  assert.ok(!output.includes("…"), output);
+});
+
 test("formatPretty - shows the author-local date, not the UTC date", () => {
   // 2:30 AM on Nov 14 at +05:30 is 21:00 UTC on Nov 13.
   const output = formatPretty(
