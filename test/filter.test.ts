@@ -144,14 +144,36 @@ test("filterByPath - nested braces", () => {
   assert.deepEqual(filterByPath("src/a.ts", "src/a.{js,{m,c}ts}"), false);
 });
 
-test("filterByPath - unbalanced or comma-less braces and brackets are literal", () => {
+test("filterByPath - unbalanced or comma-less braces are literal", () => {
   assert.deepEqual(filterByPath("src/{a.ts", "src/{a.ts"), true);
   assert.deepEqual(filterByPath("src/{a,b.ts", "src/{a,b.ts"), true);
   assert.deepEqual(filterByPath("src/a.ts", "src/{a,b.ts"), false);
   assert.deepEqual(filterByPath("src/{a}.ts", "src/{a}.ts"), true);
   assert.deepEqual(filterByPath("src/{a,b}.ts", String.raw`src/\{a,b}.ts`), true);
-  assert.deepEqual(filterByPath("src/[ab].ts", "src/[ab].ts"), true);
-  assert.deepEqual(filterByPath("src/a.ts", "src/[ab].ts"), false);
+});
+
+test("filterByPath - ** at the end of a brace alternative spans zero or more directories", () => {
+  assert.deepEqual(filterByPath("lib/a.ts", "{src,lib/**}/*.ts"), true);
+  assert.deepEqual(filterByPath("src/x", "{src/**,lib}/x"), true);
+  assert.deepEqual(filterByPath("y", "{**,z}/y"), true);
+});
+
+test("filterByPath - [ab] is a character class within one segment", () => {
+  assert.deepEqual(filterByPath("src/a.ts", "src/[ab].ts"), true);
+  assert.deepEqual(filterByPath("src/b.ts", "src/[ab].ts"), true);
+  assert.deepEqual(filterByPath("src/c.ts", "src/[ab].ts"), false);
+  assert.deepEqual(filterByPath("src/x.ts", "src/[a-z].ts"), true);
+  assert.deepEqual(filterByPath("src/a.ts", "src/[!a].ts"), false);
+  assert.deepEqual(filterByPath("src/[ab].ts", String.raw`src/\[ab].ts`), true);
+  assert.deepEqual(filterByPath("src/a.ts", String.raw`src/\[ab].ts`), false);
+});
+
+test("filterByPath - repeated ** segments do not backtrack catastrophically", () => {
+  const deep = `${"d/".repeat(40)}a`;
+  const start = performance.now();
+  assert.deepEqual(filterByPath(deep, "**/**/**/**/**/**/**/**/b"), false);
+  const elapsed = performance.now() - start;
+  assert.ok(elapsed < 100, `took ${elapsed.toFixed(1)} ms`);
 });
 
 test("filterByPath - no glob passes all", () => {
