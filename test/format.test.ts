@@ -15,7 +15,7 @@ function makeComment(overrides: Partial<LateNightComment> = {}): LateNightCommen
     filePath: "src/db/connection.ts",
     lineNumber: 42,
     comment: "i think this works but i don't know why",
-    language: "ts",
+    extension: "ts",
     ...overrides,
   };
 }
@@ -56,6 +56,12 @@ test("formatJson - localTime is 24-hour HH:MM", () => {
     JSON.parse(formatJson(makeComment({ localHour: 14, localMinute: 30 }))).localTime,
     "14:30",
   );
+});
+
+test("formatJson - reports the file extension as `extension`", () => {
+  const parsed = JSON.parse(formatJson(makeComment()));
+  assert.equal(parsed.extension, "ts");
+  assert.ok(!("language" in parsed));
 });
 
 test("formatStats - empty list", () => {

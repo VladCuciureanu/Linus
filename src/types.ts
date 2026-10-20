@@ -11,7 +11,8 @@ export interface LateNightComment {
   filePath: string;
   lineNumber: number;
   comment: string;
-  language: string;
+  /** Lowercased file extension without the dot; empty if none. */
+  extension: string;
 }
 
 /** Parsed CLI options. */

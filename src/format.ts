@@ -83,7 +83,7 @@ export function formatJson(comment: LateNightComment): string {
     filePath: comment.filePath,
     lineNumber: comment.lineNumber,
     comment: comment.comment,
-    language: comment.language,
+    extension: comment.extension,
   });
 }
 

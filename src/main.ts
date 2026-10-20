@@ -157,7 +157,7 @@ async function* collectComments(opts: CliOptions): AsyncGenerator<LateNightComme
           filePath,
           lineNumber,
           comment,
-          language: getExtension(filePath),
+          extension: getExtension(filePath),
         };
         if (filterComment(lnc, opts)) yield lnc;
       }
