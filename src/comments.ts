@@ -204,8 +204,16 @@ export function extractCommentsFromLines(
 ): { lineNumber: number; comment: string }[] {
   const results: { lineNumber: number; comment: string }[] = [];
   let block: BlockState = { active: false, endMarker: "" };
+  let prevLineNumber: number | null = null;
 
   for (const { lineNumber, content } of lines) {
+    // Added lines from different hunks are not contiguous: whatever sits
+    // between them is unknown, so an open block comment can't be assumed
+    // to continue across the gap.
+    if (prevLineNumber !== null && lineNumber !== prevLineNumber + 1) {
+      block = { active: false, endMarker: "" };
+    }
+    prevLineNumber = lineNumber;
     const { comment, block: newBlock } = extractComment(content, filePath, block);
     block = newBlock;
     if (comment && !isTrivial(comment)) {

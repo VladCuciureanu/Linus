@@ -145,3 +145,13 @@ test("extractComment - ignores # inside string literals", () => {
   assert.deepEqual(extractComment(`color = "#fff"`, "foo.py").comment, null);
   assert.deepEqual(extractComment(`color = "#fff"  # hex value`, "foo.py").comment, "hex value");
 });
+
+test("extractCommentsFromLines - block state does not carry across hunk gaps", () => {
+  const lines = [
+    { lineNumber: 10, content: "/* opened in one hunk" },
+    { lineNumber: 40, content: "const x = compute(y);" },
+    { lineNumber: 41, content: "return x;" },
+  ];
+  const result = extractCommentsFromLines(lines, "foo.ts");
+  assert.deepEqual(result, [{ lineNumber: 10, comment: "opened in one hunk" }]);
+});
