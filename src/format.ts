@@ -18,10 +18,6 @@ function formatTime(hour: number, minute: number): string {
   return `${h12}:${minute.toString().padStart(2, "0")} ${ampm}`;
 }
 
-function formatDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
 function wordWrap(text: string, width: number): string[] {
   if (text.length <= width) return [text];
   const lines: string[] = [];
@@ -44,9 +40,7 @@ export function formatPretty(
   const width = 55;
   const inner = width - 4; // padding inside box
   const time = formatTime(comment.localHour, comment.localMinute);
-  const date = formatDate(comment.date);
-  const header1 = `${time} · ${date} · @${comment.author}`;
-  const header2 = `${comment.hash} · ${comment.filePath}`;
+  const date = comment.localDate;
   const commentLines = wordWrap(comment.comment, inner);
 
   const top = `┌${"─".repeat(width - 2)}┐`;
@@ -60,13 +54,12 @@ export function formatPretty(
   const h2 = c(DIM, `${comment.hash} · ${comment.filePath}`, useColor);
 
   const lines = [top];
-  lines.push(`│ ${pad(h1, inner + (h1.length - header1.length))} │`);
-  lines.push(`│ ${pad(h2, inner + (h2.length - header2.length))} │`);
+  lines.push(`│ ${pad(h1, inner)} │`);
+  lines.push(`│ ${pad(h2, inner)} │`);
   lines.push(mid);
   for (const cl of commentLines) {
     const styled = c(WHITE + BOLD, `"${cl}"`, useColor);
-    const raw = `"${cl}"`;
-    lines.push(`│ ${pad(styled, inner + (styled.length - raw.length))} │`);
+    lines.push(`│ ${pad(styled, inner)} │`);
   }
   lines.push(bot);
 
@@ -88,16 +81,22 @@ export function formatJson(comment: LateNightComment): string {
   });
 }
 
-/** Generate stats summary from a list of comments. */
-export function formatStats(
-  comments: LateNightComment[],
-  useColor: boolean,
-): string {
-  if (comments.length === 0) {
-    return "No late-night comments found.";
-  }
+/** Summary statistics over a list of comments. */
+export interface Stats {
+  total: number;
+  busiestHour: { hour: number; count: number } | null;
+  topAuthor: { name: string; count: number } | null;
+  topFile: { path: string; count: number } | null;
+  /** Non-empty hours only, in ascending hour order. */
+  hourDistribution: { hour: number; count: number }[];
+}
 
-  // Busiest hour
+function top<K>(counts: Map<K, number>): [K, number] | undefined {
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+}
+
+/** Compute summary statistics from a list of comments. */
+export function computeStats(comments: LateNightComment[]): Stats {
   const hourCounts = new Map<number, number>();
   const authorCounts = new Map<string, number>();
   const fileCounts = new Map<string, number>();
@@ -108,28 +107,53 @@ export function formatStats(
     fileCounts.set(cmt.filePath, (fileCounts.get(cmt.filePath) ?? 0) + 1);
   }
 
-  const busiestHour = [...hourCounts.entries()].sort((a, b) => b[1] - a[1])[0];
-  const topAuthor = [...authorCounts.entries()].sort((a, b) => b[1] - a[1])[0];
-  const topFile = [...fileCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+  const busiestHour = top(hourCounts);
+  const topAuthor = top(authorCounts);
+  const topFile = top(fileCounts);
+
+  return {
+    total: comments.length,
+    busiestHour: busiestHour ? { hour: busiestHour[0], count: busiestHour[1] } : null,
+    topAuthor: topAuthor ? { name: topAuthor[0], count: topAuthor[1] } : null,
+    topFile: topFile ? { path: topFile[0], count: topFile[1] } : null,
+    hourDistribution: [...hourCounts.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .map(([hour, count]) => ({ hour, count })),
+  };
+}
+
+/** Format summary statistics as a single JSON object. */
+export function formatStatsJson(comments: LateNightComment[]): string {
+  return JSON.stringify(computeStats(comments));
+}
+
+/** Generate stats summary from a list of comments. */
+export function formatStats(
+  comments: LateNightComment[],
+  useColor: boolean,
+): string {
+  const stats = computeStats(comments);
+  const { busiestHour, topAuthor, topFile } = stats;
+  if (!busiestHour || !topAuthor || !topFile) {
+    return "No late-night comments found.";
+  }
 
   const lines = [
     c(BOLD + MAGENTA, "── Stats ──", useColor),
-    `Total late-night comments: ${c(BOLD, String(comments.length), useColor)}`,
-    `Busiest hour: ${c(BOLD, `${busiestHour[0]}:00`, useColor)} (${busiestHour[1]} comments)`,
-    `Most prolific night owl: ${c(BOLD, topAuthor[0], useColor)} (${topAuthor[1]} comments)`,
-    `Most commented file: ${c(BOLD, topFile[0], useColor)} (${topFile[1]} comments)`,
+    `Total late-night comments: ${c(BOLD, String(stats.total), useColor)}`,
+    `Busiest hour: ${c(BOLD, `${busiestHour.hour}:00`, useColor)} (${busiestHour.count} comments)`,
+    `Most prolific night owl: ${c(BOLD, topAuthor.name, useColor)} (${topAuthor.count} comments)`,
+    `Most commented file: ${c(BOLD, topFile.path, useColor)} (${topFile.count} comments)`,
   ];
 
   // Hour histogram
   lines.push("");
   lines.push(c(DIM, "Hour distribution:", useColor));
-  const maxCount = Math.max(...hourCounts.values());
+  const maxCount = Math.max(...stats.hourDistribution.map((h) => h.count));
   const barWidth = 30;
-  for (let h = 0; h < 24; h++) {
-    const count = hourCounts.get(h) ?? 0;
-    if (count === 0) continue;
+  for (const { hour, count } of stats.hourDistribution) {
     const bar = "█".repeat(Math.max(1, Math.round((count / maxCount) * barWidth)));
-    lines.push(`  ${String(h).padStart(2)}:00 ${c(CYAN, bar, useColor)} ${count}`);
+    lines.push(`  ${String(hour).padStart(2)}:00 ${c(CYAN, bar, useColor)} ${count}`);
   }
 
   return lines.join("\n");

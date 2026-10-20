@@ -4,6 +4,8 @@ export interface LateNightComment {
   author: string;
   authorEmail: string;
   date: Date;
+  /** Author-local calendar date, YYYY-MM-DD. */
+  localDate: string;
   localHour: number;
   localMinute: number;
   filePath: string;
@@ -37,7 +39,7 @@ export interface CommitMeta {
   hash: string;
   author: string;
   authorEmail: string;
-  dateIso: string;
+  localDate: string;
   localHour: number;
   localMinute: number;
   date: Date;

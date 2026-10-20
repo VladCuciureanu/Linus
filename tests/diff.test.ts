@@ -1,7 +1,8 @@
-import { assertEquals } from "https://deno.land/std@0.224.0/assert/assert_equals.ts";
+import { test } from "node:test";
+import assert from "node:assert/strict";
 import { parseDiff, getExtension } from "../src/diff.ts";
 
-Deno.test("parseDiff - single file with added lines", () => {
+test("parseDiff - single file with added lines", () => {
   const diff = `diff --git a/src/index.ts b/src/index.ts
 --- a/src/index.ts
 +++ b/src/index.ts
@@ -12,20 +13,20 @@ Deno.test("parseDiff - single file with added lines", () => {
  const z = 3;`;
 
   const result = parseDiff(diff);
-  assertEquals(result.length, 2);
-  assertEquals(result[0], {
+  assert.deepEqual(result.length, 2);
+  assert.deepEqual(result[0], {
     filePath: "src/index.ts",
     lineNumber: 2,
     content: "// this is fine",
   });
-  assertEquals(result[1], {
+  assert.deepEqual(result[1], {
     filePath: "src/index.ts",
     lineNumber: 3,
     content: "const y = 2;",
   });
 });
 
-Deno.test("parseDiff - multiple files", () => {
+test("parseDiff - multiple files", () => {
   const diff = `diff --git a/a.ts b/a.ts
 --- /dev/null
 +++ b/a.ts
@@ -40,14 +41,14 @@ diff --git a/b.py b/b.py
 +b = 1`;
 
   const result = parseDiff(diff);
-  assertEquals(result.length, 4);
-  assertEquals(result[0].filePath, "a.ts");
-  assertEquals(result[0].lineNumber, 1);
-  assertEquals(result[2].filePath, "b.py");
-  assertEquals(result[2].content, "# file b");
+  assert.deepEqual(result.length, 4);
+  assert.deepEqual(result[0].filePath, "a.ts");
+  assert.deepEqual(result[0].lineNumber, 1);
+  assert.deepEqual(result[2].filePath, "b.py");
+  assert.deepEqual(result[2].content, "# file b");
 });
 
-Deno.test("parseDiff - skips binary files", () => {
+test("parseDiff - skips binary files", () => {
   const diff = `diff --git a/image.png b/image.png
 Binary files /dev/null and b/image.png differ
 diff --git a/code.ts b/code.ts
@@ -57,11 +58,11 @@ diff --git a/code.ts b/code.ts
 +// real code`;
 
   const result = parseDiff(diff);
-  assertEquals(result.length, 1);
-  assertEquals(result[0].filePath, "code.ts");
+  assert.deepEqual(result.length, 1);
+  assert.deepEqual(result[0].filePath, "code.ts");
 });
 
-Deno.test("parseDiff - skips deleted files", () => {
+test("parseDiff - skips deleted files", () => {
   const diff = `diff --git a/old.ts b/old.ts
 --- a/old.ts
 +++ /dev/null
@@ -70,10 +71,10 @@ Deno.test("parseDiff - skips deleted files", () => {
 -const x = 1;`;
 
   const result = parseDiff(diff);
-  assertEquals(result.length, 0);
+  assert.deepEqual(result.length, 0);
 });
 
-Deno.test("parseDiff - correct line numbers with mixed hunks", () => {
+test("parseDiff - correct line numbers with mixed hunks", () => {
   const diff = `diff --git a/f.ts b/f.ts
 --- a/f.ts
 +++ b/f.ts
@@ -86,15 +87,15 @@ Deno.test("parseDiff - correct line numbers with mixed hunks", () => {
 +added3`;
 
   const result = parseDiff(diff);
-  assertEquals(result.length, 3);
-  assertEquals(result[0].lineNumber, 6);
-  assertEquals(result[1].lineNumber, 7);
-  assertEquals(result[2].lineNumber, 9);
+  assert.deepEqual(result.length, 3);
+  assert.deepEqual(result[0].lineNumber, 6);
+  assert.deepEqual(result[1].lineNumber, 7);
+  assert.deepEqual(result[2].lineNumber, 9);
 });
 
-Deno.test("getExtension - common cases", () => {
-  assertEquals(getExtension("src/foo.ts"), "ts");
-  assertEquals(getExtension("bar.py"), "py");
-  assertEquals(getExtension("Makefile"), "");
-  assertEquals(getExtension("a.b.c.js"), "js");
+test("getExtension - common cases", () => {
+  assert.deepEqual(getExtension("src/foo.ts"), "ts");
+  assert.deepEqual(getExtension("bar.py"), "py");
+  assert.deepEqual(getExtension("Makefile"), "");
+  assert.deepEqual(getExtension("a.b.c.js"), "js");
 });

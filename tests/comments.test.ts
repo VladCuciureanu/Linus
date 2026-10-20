@@ -1,96 +1,97 @@
-import { assertEquals } from "https://deno.land/std@0.224.0/assert/assert_equals.ts";
+import { test } from "node:test";
+import assert from "node:assert/strict";
 import { extractComment, extractCommentsFromLines } from "../src/comments.ts";
 
 // --- Single-line comments ---
 
-Deno.test("extractComment - JS/TS double-slash", () => {
+test("extractComment - JS/TS double-slash", () => {
   const { comment } = extractComment("  // this is a comment", "foo.ts");
-  assertEquals(comment, "this is a comment");
+  assert.deepEqual(comment, "this is a comment");
 });
 
-Deno.test("extractComment - Python hash", () => {
+test("extractComment - Python hash", () => {
   const { comment } = extractComment("  # python comment", "foo.py");
-  assertEquals(comment, "python comment");
+  assert.deepEqual(comment, "python comment");
 });
 
-Deno.test("extractComment - Shell hash", () => {
+test("extractComment - Shell hash", () => {
   const { comment } = extractComment("# shell comment", "foo.sh");
-  assertEquals(comment, "shell comment");
+  assert.deepEqual(comment, "shell comment");
 });
 
-Deno.test("extractComment - skips shebang", () => {
+test("extractComment - skips shebang", () => {
   const { comment } = extractComment("#!/usr/bin/env node", "foo.sh");
-  assertEquals(comment, null);
+  assert.deepEqual(comment, null);
 });
 
-Deno.test("extractComment - Lua double-dash", () => {
+test("extractComment - Lua double-dash", () => {
   const { comment } = extractComment("-- lua comment", "foo.lua");
-  assertEquals(comment, "lua comment");
+  assert.deepEqual(comment, "lua comment");
 });
 
-Deno.test("extractComment - SQL double-dash", () => {
+test("extractComment - SQL double-dash", () => {
   const { comment } = extractComment("-- select wisely", "query.sql");
-  assertEquals(comment, "select wisely");
+  assert.deepEqual(comment, "select wisely");
 });
 
-Deno.test("extractComment - Lisp semicolon", () => {
+test("extractComment - Lisp semicolon", () => {
   const { comment } = extractComment("; lisp wisdom", "foo.clj");
-  assertEquals(comment, "lisp wisdom");
+  assert.deepEqual(comment, "lisp wisdom");
 });
 
-Deno.test("extractComment - LaTeX percent", () => {
+test("extractComment - LaTeX percent", () => {
   const { comment } = extractComment("% latex note", "doc.tex");
-  assertEquals(comment, "latex note");
+  assert.deepEqual(comment, "latex note");
 });
 
 // --- Block comments ---
 
-Deno.test("extractComment - C-style single-line block", () => {
+test("extractComment - C-style single-line block", () => {
   const { comment } = extractComment("  /* inline block */", "foo.ts");
-  assertEquals(comment, "inline block");
+  assert.deepEqual(comment, "inline block");
 });
 
-Deno.test("extractComment - C-style multi-line block", () => {
+test("extractComment - C-style multi-line block", () => {
   let block = { active: false, endMarker: "" };
   let result;
 
   result = extractComment("/* start of block", "foo.ts", block);
-  assertEquals(result.comment, "start of block");
-  assertEquals(result.block.active, true);
+  assert.deepEqual(result.comment, "start of block");
+  assert.deepEqual(result.block.active, true);
   block = result.block;
 
   result = extractComment(" * middle line", "foo.ts", block);
-  assertEquals(result.comment, "middle line");
-  assertEquals(result.block.active, true);
+  assert.deepEqual(result.comment, "middle line");
+  assert.deepEqual(result.block.active, true);
   block = result.block;
 
   result = extractComment(" * end here */", "foo.ts", block);
-  assertEquals(result.comment, "end here");
-  assertEquals(result.block.active, false);
+  assert.deepEqual(result.comment, "end here");
+  assert.deepEqual(result.block.active, false);
 });
 
-Deno.test("extractComment - HTML comment", () => {
+test("extractComment - HTML comment", () => {
   const { comment } = extractComment("<!-- html note -->", "index.html");
-  assertEquals(comment, "html note");
+  assert.deepEqual(comment, "html note");
 });
 
 // --- Unknown extension ---
 
-Deno.test("extractComment - unknown extension returns null", () => {
+test("extractComment - unknown extension returns null", () => {
   const { comment } = extractComment("// something", "foo.xyz");
-  assertEquals(comment, null);
+  assert.deepEqual(comment, null);
 });
 
 // --- No comment in line ---
 
-Deno.test("extractComment - plain code returns null", () => {
+test("extractComment - plain code returns null", () => {
   const { comment } = extractComment("const x = 1;", "foo.ts");
-  assertEquals(comment, null);
+  assert.deepEqual(comment, null);
 });
 
 // --- Trivial filtering ---
 
-Deno.test("extractCommentsFromLines - filters trivial comments", () => {
+test("extractCommentsFromLines - filters trivial comments", () => {
   const lines = [
     { lineNumber: 1, content: "// eslint-disable-next-line" },
     { lineNumber: 2, content: "// @ts-ignore" },
@@ -98,11 +99,11 @@ Deno.test("extractCommentsFromLines - filters trivial comments", () => {
     { lineNumber: 4, content: "// auto-generated by tool" },
   ];
   const result = extractCommentsFromLines(lines, "foo.ts");
-  assertEquals(result.length, 1);
-  assertEquals(result[0].comment, "real comment");
+  assert.deepEqual(result.length, 1);
+  assert.deepEqual(result[0].comment, "real comment");
 });
 
-Deno.test("extractCommentsFromLines - handles multi-line blocks", () => {
+test("extractCommentsFromLines - handles multi-line blocks", () => {
   const lines = [
     { lineNumber: 10, content: "/* block start" },
     { lineNumber: 11, content: " * inner" },
@@ -110,7 +111,108 @@ Deno.test("extractCommentsFromLines - handles multi-line blocks", () => {
     { lineNumber: 13, content: "const x = 1;" },
   ];
   const result = extractCommentsFromLines(lines, "foo.go");
-  assertEquals(result.length, 2);
-  assertEquals(result[0].comment, "block start");
-  assertEquals(result[1].comment, "inner");
+  assert.deepEqual(result.length, 2);
+  assert.deepEqual(result[0].comment, "block start");
+  assert.deepEqual(result[1].comment, "inner");
+});
+
+// --- String literals ---
+
+test("extractComment - ignores // inside string literals", () => {
+  assert.deepEqual(extractComment(`const url = "http://x";`, "foo.ts").comment, null);
+  assert.deepEqual(extractComment(`const url = 'https://example.com/a';`, "foo.ts").comment, null);
+  assert.deepEqual(extractComment("const url = `http://${host}/`;", "foo.ts").comment, null);
+});
+
+test("extractComment - finds comment after string containing //", () => {
+  const { comment } = extractComment(`fetch("http://x"); // real comment`, "foo.ts");
+  assert.deepEqual(comment, "real comment");
+});
+
+test("extractComment - handles escaped quotes in strings", () => {
+  const { comment } = extractComment(`const s = "say \\"//hi\\" ok"; // after escape`, "foo.ts");
+  assert.deepEqual(comment, "after escape");
+  assert.deepEqual(extractComment(`const s = 'it\\'s // not a comment';`, "foo.ts").comment, null);
+});
+
+test("extractComment - ignores /* inside string literals", () => {
+  const result = extractComment(`const glob = "src/*";`, "foo.ts");
+  assert.deepEqual(result.comment, null);
+  assert.deepEqual(result.block.active, false);
+});
+
+test("extractComment - ignores # inside string literals", () => {
+  assert.deepEqual(extractComment(`color = "#fff"`, "foo.py").comment, null);
+  assert.deepEqual(extractComment(`color = "#fff"  # hex value`, "foo.py").comment, "hex value");
+});
+
+// --- Apostrophes are only string delimiters where the language says so ---
+
+test("extractComment - LaTeX apostrophe before % does not hide the comment", () => {
+  const { comment } = extractComment("We can't do this. % TODO: don't forget", "paper.tex");
+  assert.deepEqual(comment, "TODO: don't forget");
+});
+
+test("extractComment - Markdown/HTML apostrophe before <!-- does not hide the comment", () => {
+  assert.deepEqual(extractComment("It's late <!-- we'll fix this -->", "README.md").comment, "we'll fix this");
+  assert.deepEqual(extractComment("It's late <!-- we'll fix this -->", "index.html").comment, "we'll fix this");
+});
+
+test("extractComment - Elisp quote before ; does not hide the comment", () => {
+  const { comment } = extractComment("(setq x 'foo) ; don't touch", "init.el");
+  assert.deepEqual(comment, "don't touch");
+});
+
+test("extractComment - Elisp still skips ; inside double-quoted strings", () => {
+  assert.deepEqual(extractComment(`(message "a; b")`, "init.el").comment, null);
+});
+
+test("extractComment - Rust lifetimes do not hide the comment", () => {
+  const { comment } = extractComment("fn f<'a>(x: &'a str, y: &'a str) // don't panic", "lib.rs");
+  assert.deepEqual(comment, "don't panic");
+});
+
+test("extractComment - Rust char literals and strings are still skipped", () => {
+  assert.deepEqual(extractComment(`let q = '"'; // quote char`, "lib.rs").comment, "quote char");
+  assert.deepEqual(extractComment(`let s = "a // b";`, "lib.rs").comment, null);
+  assert.deepEqual(extractComment(`let c = '\\''; // escaped`, "lib.rs").comment, "escaped");
+});
+
+test("extractComment - TSX apostrophe in JSX text does not hide the comment", () => {
+  const { comment } = extractComment("<p>Don't click</p> {/* it's broken */}", "App.tsx");
+  assert.deepEqual(comment, "it's broken");
+});
+
+test("extractComment - // inside a normal JS single-quoted string is not a comment", () => {
+  assert.deepEqual(extractComment(`const u = 'http://x'; // real`, "foo.js").comment, "real");
+  assert.deepEqual(extractComment(`const u = 'http://x';`, "foo.js").comment, null);
+  assert.deepEqual(extractComment(`f('a', 'b // c');`, "foo.jsx").comment, null);
+  assert.deepEqual(extractComment(`const u = "http://x";`, "foo.js").comment, null);
+});
+
+test("extractComment - Python still skips # inside single-quoted strings", () => {
+  assert.deepEqual(extractComment(`s = 'a # b'`, "foo.py").comment, null);
+  assert.deepEqual(extractComment(`s = 'a # b'  # note`, "foo.py").comment, "note");
+});
+
+test("extractCommentsFromLines - block state does not carry across hunk gaps", () => {
+  const lines = [
+    { lineNumber: 10, content: "/* opened in one hunk" },
+    { lineNumber: 40, content: "const x = compute(y);" },
+    { lineNumber: 41, content: "return x;" },
+  ];
+  const result = extractCommentsFromLines(lines, "foo.ts");
+  assert.deepEqual(result, [{ lineNumber: 10, comment: "opened in one hunk" }]);
+});
+
+test("extractComment - Objective-C .m uses C-style comments", () => {
+  assert.deepEqual(extractComment("// objc note", "Foo.m").comment, "objc note");
+  assert.deepEqual(extractComment(`NSLog(@"%d", n);`, "Foo.m").comment, null);
+});
+
+test("extractComment - Dockerfile and Makefile matched by basename", () => {
+  assert.deepEqual(extractComment("# install deps", "Dockerfile").comment, "install deps");
+  assert.deepEqual(extractComment("# build all", "Makefile").comment, "build all");
+  assert.deepEqual(extractComment("# nested", "docker/app/Dockerfile").comment, "nested");
+  assert.deepEqual(extractComment("# gnu", "GNUmakefile").comment, "gnu");
 });

@@ -1,0 +1,28 @@
+{
+  "name": "linus",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The 3AM comment finder: finds code comments written between midnight and 4 AM across a repo's history.",
+  "type": "module",
+  "bin": {
+    "linus": "dist/main.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node src/main.ts",
+    "dev": "node src/main.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "prepare": "npm run build",
+    "test": "node --test \"tests/**/*.test.ts\"",
+    "typecheck": "tsc"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2"
+  }
+}
