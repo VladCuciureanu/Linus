@@ -21,14 +21,6 @@ export function isInTimeWindow(
   }
 }
 
-/** Check if a commit's time falls in the configured window. */
-export function filterByTime(
-  meta: CommitMeta,
-  opts: Pick<CliOptions, "after" | "before">,
-): boolean {
-  return isInTimeWindow(meta.localHour, meta.localMinute, opts.after, opts.before);
-}
-
 /** Check if a commit passes the author filter. */
 export function filterByAuthor(meta: CommitMeta, author?: string): boolean {
   if (!author) return true;
@@ -48,17 +40,6 @@ export function filterByPath(filePath: string, pathGlob?: string): boolean {
   return posix.matchesGlob(filePath, pathGlob);
 }
 
-/** Check if a comment matches the grep pattern. */
-export function filterByGrep(comment: string, grep?: RegExp): boolean {
-  if (!grep) return true;
-  return grep.test(comment);
-}
-
-/** Check if a comment meets the minimum length requirement. */
-export function filterByLength(comment: string, minLength: number): boolean {
-  return comment.length >= minLength;
-}
-
 /** Apply all comment-level filters. */
 export function filterComment(
   comment: LateNightComment,
@@ -66,7 +47,7 @@ export function filterComment(
 ): boolean {
   return (
     filterByPath(comment.filePath, opts.pathGlob) &&
-    filterByGrep(comment.comment, opts.grep) &&
-    filterByLength(comment.comment, opts.minLength)
+    (!opts.grep || opts.grep.test(comment.comment)) &&
+    comment.comment.length >= opts.minLength
   );
 }

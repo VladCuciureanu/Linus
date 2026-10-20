@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { extractCommentsFromLines } from "./comments.ts";
 import { getExtension } from "./diff.ts";
-import { filterByAuthor, filterByTime, filterComment } from "./filter.ts";
+import { filterByAuthor, filterComment, isInTimeWindow } from "./filter.ts";
 import { formatJson, formatPretty, formatStats, formatStatsJson } from "./format.ts";
 import { readGitLog } from "./git.ts";
 import type { CliOptions, LateNightComment } from "./types.ts";
@@ -137,8 +137,8 @@ async function* collectComments(opts: CliOptions): AsyncGenerator<LateNightComme
     since: opts.since,
     until: opts.until,
   })) {
-    // Time filter at commit level
-    if (!filterByTime(commit.meta, opts)) continue;
+    const { localHour, localMinute } = commit.meta;
+    if (!isInTimeWindow(localHour, localMinute, opts.after, opts.before)) continue;
     if (!filterByAuthor(commit.meta, opts.author)) continue;
 
     // Group added lines by file
