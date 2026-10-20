@@ -127,6 +127,33 @@ test("filterByPath - regex metacharacters are literal", () => {
   assert.deepEqual(filterByPath("src/aXts", "src/a.ts"), false);
 });
 
+test("filterByPath - {a,b} matches either alternative", () => {
+  assert.deepEqual(filterByPath("src/a.ts", "src/{a,b}.ts"), true);
+  assert.deepEqual(filterByPath("src/b.ts", "src/{a,b}.ts"), true);
+  assert.deepEqual(filterByPath("src/c.ts", "src/{a,b}.ts"), false);
+  assert.deepEqual(filterByPath("src/deep/a.tsx", "**/*.{ts,tsx}"), true);
+  assert.deepEqual(filterByPath("a.ts", "**/*.{ts,tsx}"), true);
+  assert.deepEqual(filterByPath("src/a.js", "**/*.{ts,tsx}"), false);
+  assert.deepEqual(filterByPath("lib/x/a.ts", "{src,lib/**}/*.ts"), true);
+  assert.deepEqual(filterByPath("src/x/a.ts", "{src,lib/**}/*.ts"), false);
+});
+
+test("filterByPath - nested braces", () => {
+  assert.deepEqual(filterByPath("src/a.mts", "src/a.{js,{m,c}ts}"), true);
+  assert.deepEqual(filterByPath("src/a.js", "src/a.{js,{m,c}ts}"), true);
+  assert.deepEqual(filterByPath("src/a.ts", "src/a.{js,{m,c}ts}"), false);
+});
+
+test("filterByPath - unbalanced or comma-less braces and brackets are literal", () => {
+  assert.deepEqual(filterByPath("src/{a.ts", "src/{a.ts"), true);
+  assert.deepEqual(filterByPath("src/{a,b.ts", "src/{a,b.ts"), true);
+  assert.deepEqual(filterByPath("src/a.ts", "src/{a,b.ts"), false);
+  assert.deepEqual(filterByPath("src/{a}.ts", "src/{a}.ts"), true);
+  assert.deepEqual(filterByPath("src/{a,b}.ts", String.raw`src/\{a,b}.ts`), true);
+  assert.deepEqual(filterByPath("src/[ab].ts", "src/[ab].ts"), true);
+  assert.deepEqual(filterByPath("src/a.ts", "src/[ab].ts"), false);
+});
+
 test("filterByPath - no glob passes all", () => {
   assert.deepEqual(filterByPath("any/file.ts", undefined), true);
 });
