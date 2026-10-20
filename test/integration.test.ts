@@ -147,6 +147,21 @@ test("integration - --help", async () => {
   assert.ok(stdout.includes("USAGE:"));
 });
 
+test("integration - --help aligns option descriptions in one column", async () => {
+  const { stdout } = await runLinus(["--help"]);
+  const optionLines = stdout.split("\n").filter((l) => /^ {2}-/.test(l));
+  assert.ok(optionLines.length > 10);
+  // Column where the description starts: after the flag and a run of 2+ spaces.
+  const columns = new Set(optionLines.map((l) => /^ {2}\S.*? {2,}(?=\S)/.exec(l)?.[0].length));
+  assert.equal(columns.size, 1, optionLines.join("\n"));
+});
+
+test("integration - --help does not hard-code the default time window", async () => {
+  const { stdout } = await runLinus(["--help"]);
+  assert.doesNotMatch(stdout, /written between midnight and 4am/);
+  assert.match(stdout, /--after/);
+});
+
 test("integration - --version", async () => {
   const { stdout, code } = await runLinus(["--version"]);
   assert.deepEqual(code, 0);

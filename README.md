@@ -1,6 +1,6 @@
 # Linus
 
-The 3 AM comment finder: walks a repository's history and collects every code comment added between midnight and 4 AM, in the author's local time. They are always unhinged and often prophetic.
+The 3 AM comment finder: walks a repository's history and collects every code comment added late at night (between midnight and 4 AM by default), in the author's local time. They are always unhinged and often prophetic.
 
 ```
 ┌─────────────────────────────────────────────────────┐

@@ -16,7 +16,8 @@ const { version: VERSION } = JSON.parse(
 const HELP = `
 linus v${VERSION} — the 3am comment finder
 
-Finds every code comment written between midnight and 4am
+Finds every code comment written late at night (between
+midnight and 4am by default; see --after and --before)
 across your repo's history. They are always unhinged and
 often prophetic.
 
@@ -27,8 +28,8 @@ ARGUMENTS:
   [path]    Path to git repository (default: current directory)
 
 OPTIONS:
-  --after <HH:MM>        Start of time window (default: 00:00)
-  --before <HH:MM>       End of time window (default: 04:00)
+  --after <HH:MM>         Start of time window (default: 00:00)
+  --before <HH:MM>        End of time window (default: 04:00)
   --author <name>         Filter by author name/email (substring match)
   --since <date>          Only commits after this date
   --until <date>          Only commits before this date
