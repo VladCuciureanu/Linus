@@ -219,3 +219,48 @@ test("formatStats - escape sequences in author and path are stripped", () => {
   assert.ok(output.includes("Most prolific night owl: Eve "), output);
   assert.ok(output.includes("Most commented file: a.ts "), output);
 });
+
+const BIDI = /[‎‏‪-‮⁦-⁩]/;
+const bidiControls = "‪‫‬‭‮⁦⁧⁨⁩‎‏";
+
+test("formatPretty - bidi control characters in repo data are dropped", () => {
+  const output = formatPretty(
+    makeComment({
+      author: `Eve${bidiControls}`,
+      filePath: `src/‮exe.txt‬`,
+      comment: `ok ⁧admin⁩ ${bidiControls}`,
+    }),
+    false,
+  );
+  assert.ok(!BIDI.test(output), JSON.stringify(output));
+  assert.ok(output.includes("@Eve "), output);
+  assert.ok(output.includes("abc1234 · src/exe.txt "), output);
+  assert.ok(output.includes('"ok admin "'), output);
+  for (const line of output.split("\n")) assert.equal(stringWidth(line), 55, output);
+});
+
+test("formatStats - bidi control characters in author and path are dropped", () => {
+  const output = formatStats([makeComment({ author: `‮Eve‬`, filePath: `a⁦.ts⁩` })], false);
+  assert.ok(!BIDI.test(output), JSON.stringify(output));
+  assert.ok(output.includes("Most prolific night owl: Eve "), output);
+  assert.ok(output.includes("Most commented file: a.ts "), output);
+});
+
+test("formatPretty - trailing whitespace in header fields is trimmed", () => {
+  // Styled spans must end right after the text, not after invisible padding.
+  const colored = formatPretty(makeComment({ author: "Eve\t", filePath: "src/a.ts\t \t" }), true);
+  assert.ok(colored.includes("@Eve\x1b[0m"), JSON.stringify(colored));
+  assert.ok(colored.includes("abc1234 · src/a.ts\x1b[0m"), JSON.stringify(colored));
+  // A name that fits once trimmed must not be cut with an ellipsis.
+  const fits = "Q".repeat(51 - "2:47 AM · 2023-11-14 · @".length);
+  const plain = formatPretty(makeComment({ author: `${fits}\t` }), false);
+  assert.ok(plain.includes(`@${fits} │`), plain);
+  assert.ok(!plain.includes("…"), plain);
+  for (const line of plain.split("\n")) assert.equal(stringWidth(line), 55, plain);
+});
+
+test("formatStats - trailing whitespace in author and path is trimmed", () => {
+  const output = formatStats([makeComment({ author: "Eve\t", filePath: "a.ts \t" })], false);
+  assert.ok(output.includes("Most prolific night owl: Eve (1 comments)"), output);
+  assert.ok(output.includes("Most commented file: a.ts (1 comments)"), output);
+});

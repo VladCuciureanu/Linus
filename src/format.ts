@@ -34,7 +34,9 @@ function graphemes(text: string): string[] {
 /**
  * Make repo-supplied text safe to draw in the card: strip ANSI escape
  * sequences, turn tabs into spaces and drop any other control characters,
- * so data can neither break the box nor send codes to the terminal.
+ * so data can neither break the box nor send codes to the terminal. Bidi
+ * controls are dropped too, so data can't visually reorder the text
+ * ("Trojan Source").
  */
 function sanitize(text: string): string {
   return (
@@ -42,7 +44,13 @@ function sanitize(text: string): string {
       .replace(/\t/g, "    ")
       // biome-ignore lint/suspicious/noControlCharactersInRegex: removes control characters
       .replace(/[\u0000-\u001f\u007f-\u009f]/g, "")
+      .replace(/[‎‏‪-‮⁦-⁩]/g, "")
   );
+}
+
+/** Sanitise a single-line field (author, path) and trim trailing whitespace. */
+function sanitizeField(text: string): string {
+  return sanitize(text).trimEnd();
 }
 
 /** Wrap `text` into lines of at most `width` terminal columns. */
@@ -105,14 +113,14 @@ export function formatPretty(comment: LateNightComment, useColor: boolean): stri
 
   // Header fields are cut with an ellipsis so each line fits inside the box.
   const h1Prefix = `${time} · ${date} · @`;
-  const author = truncate(sanitize(comment.author), inner - stringWidth(h1Prefix));
+  const author = truncate(sanitizeField(comment.author), inner - stringWidth(h1Prefix));
   const h1 =
     paint(BOLD + CYAN, time, useColor) +
     paint(DIM, ` · ${date} · `, useColor) +
     paint(YELLOW, `@${author}`, useColor);
   const h2 = paint(
     DIM,
-    truncate(sanitize(`${comment.hash} · ${comment.filePath}`), inner),
+    truncate(`${comment.hash} · ${sanitizeField(comment.filePath)}`, inner),
     useColor,
   );
 
@@ -202,8 +210,8 @@ export function formatStats(comments: LateNightComment[], useColor: boolean): st
     paint(BOLD + MAGENTA, "── Stats ──", useColor),
     `Total late-night comments: ${paint(BOLD, String(stats.total), useColor)}`,
     `Busiest hour: ${paint(BOLD, `${busiestHour.hour}:00`, useColor)} (${busiestHour.count} comments)`,
-    `Most prolific night owl: ${paint(BOLD, sanitize(topAuthor.name), useColor)} (${topAuthor.count} comments)`,
-    `Most commented file: ${paint(BOLD, sanitize(topFile.path), useColor)} (${topFile.count} comments)`,
+    `Most prolific night owl: ${paint(BOLD, sanitizeField(topAuthor.name), useColor)} (${topAuthor.count} comments)`,
+    `Most commented file: ${paint(BOLD, sanitizeField(topFile.path), useColor)} (${topFile.count} comments)`,
   ];
 
   // Hour histogram
