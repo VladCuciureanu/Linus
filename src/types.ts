@@ -51,7 +51,7 @@ export interface AddedLine {
   content: string;
 }
 
-/** A parsed diff for one commit, grouped by file. */
+/** A parsed diff for one commit: its metadata and every added line, in diff order. */
 export interface CommitDiff {
   meta: CommitMeta;
   addedLines: AddedLine[];
