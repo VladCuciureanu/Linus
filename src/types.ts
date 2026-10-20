@@ -11,7 +11,8 @@ export interface LateNightComment {
   filePath: string;
   lineNumber: number;
   comment: string;
-  language: string;
+  /** Lowercased file extension without the dot; empty if none. */
+  extension: string;
 }
 
 /** Parsed CLI options. */
@@ -30,8 +31,6 @@ export interface CliOptions {
   json: boolean;
   stats: boolean;
   noColor: boolean;
-  help: boolean;
-  version: boolean;
 }
 
 /** Metadata parsed from a commit header in git log output. */
@@ -52,7 +51,7 @@ export interface AddedLine {
   content: string;
 }
 
-/** A parsed diff for one commit, grouped by file. */
+/** A parsed diff for one commit: its metadata and every added line, in diff order. */
 export interface CommitDiff {
   meta: CommitMeta;
   addedLines: AddedLine[];

@@ -1,18 +1,23 @@
 #!/usr/bin/env node
+import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { extractCommentsFromLines } from "./comments.ts";
 import { getExtension } from "./diff.ts";
-import { filterByAuthor, filterByTime, filterComment } from "./filter.ts";
+import { filterByAuthor, filterComment, isInTimeWindow } from "./filter.ts";
 import { formatJson, formatPretty, formatStats, formatStatsJson } from "./format.ts";
 import { readGitLog } from "./git.ts";
 import type { CliOptions, LateNightComment } from "./types.ts";
 
-const VERSION = "0.1.0";
+// package.json sits one level above both src/ and dist/.
+const { version: VERSION } = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+) as { version: string };
 
 const HELP = `
 linus v${VERSION} — the 3am comment finder
 
-Finds every code comment written between midnight and 4am
+Finds every code comment written late at night (between
+midnight and 4am by default; see --after and --before)
 across your repo's history. They are always unhinged and
 often prophetic.
 
@@ -23,12 +28,13 @@ ARGUMENTS:
   [path]    Path to git repository (default: current directory)
 
 OPTIONS:
-  --after <HH:MM>        Start of time window (default: 00:00)
-  --before <HH:MM>       End of time window (default: 04:00)
+  --after <HH:MM>         Start of time window (default: 00:00)
+  --before <HH:MM>        End of time window (default: 04:00)
   --author <name>         Filter by author name/email (substring match)
   --since <date>          Only commits after this date
   --until <date>          Only commits before this date
-  --path <glob>           Only files matching this glob
+  --path <glob>           Only files matching this glob (* and ? stay
+                          within a directory, ** spans directories)
   --grep <pattern>        Filter comments by regex pattern
   --min-length <n>        Minimum comment length (default: 3)
   --max-commits <n>       Max number of commits to scan
@@ -45,7 +51,7 @@ function parseHHMM(s: string): { hour: number; minute: number } {
   if (!match) throw new Error(`Invalid time format: "${s}" (expected HH:MM)`);
   const hour = parseInt(match[1], 10);
   const minute = parseInt(match[2], 10);
-  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+  if (hour > 23 || minute > 59) {
     throw new Error(`Invalid time: "${s}"`);
   }
   return { hour, minute };
@@ -84,7 +90,10 @@ function parseRegExp(pattern: string): RegExp {
   }
 }
 
-function parseCliArgs(args: string[]): CliOptions {
+/** What the command line asks for: help, the version, or a scan with options. */
+type Command = { action: "help" } | { action: "version" } | { action: "scan"; opts: CliOptions };
+
+function parseCliArgs(args: string[]): Command {
   const { values, positionals } = parseArgs({
     args,
     options: OPTIONS,
@@ -101,7 +110,8 @@ function parseCliArgs(args: string[]): CliOptions {
   const minLength = values["min-length"];
   const maxCommits = values["max-commits"];
 
-  return {
+  // Every option is validated before --help or --version take effect.
+  const opts: CliOptions = {
     repoPath: positionals[0] ?? ".",
     after: values.after !== undefined ? parseHHMM(values.after) : { hour: 0, minute: 0 },
     before: values.before !== undefined ? parseHHMM(values.before) : { hour: 4, minute: 0 },
@@ -115,11 +125,13 @@ function parseCliArgs(args: string[]): CliOptions {
     allBranches: values["all-branches"] ?? false,
     json: values.json ?? false,
     stats: values.stats ?? false,
-    // Respect NO_COLOR env var
-    noColor: (values["no-color"] ?? false) || process.env.NO_COLOR !== undefined,
-    help: values.help ?? false,
-    version: values.version ?? false,
+    // Respect NO_COLOR (https://no-color.org): only a non-empty value disables colour.
+    noColor: (values["no-color"] ?? false) || Boolean(process.env.NO_COLOR),
   };
+
+  if (values.help) return { action: "help" };
+  if (values.version) return { action: "version" };
+  return { action: "scan", opts };
 }
 
 /** Read the git history and yield every late-night comment passing the filters. */
@@ -131,8 +143,8 @@ async function* collectComments(opts: CliOptions): AsyncGenerator<LateNightComme
     since: opts.since,
     until: opts.until,
   })) {
-    // Time filter at commit level
-    if (!filterByTime(commit.meta, opts)) continue;
+    const { localHour, localMinute } = commit.meta;
+    if (!isInTimeWindow(localHour, localMinute, opts.after, opts.before)) continue;
     if (!filterByAuthor(commit.meta, opts.author)) continue;
 
     // Group added lines by file
@@ -157,7 +169,7 @@ async function* collectComments(opts: CliOptions): AsyncGenerator<LateNightComme
           filePath,
           lineNumber,
           comment,
-          language: getExtension(filePath),
+          extension: getExtension(filePath),
         };
         if (filterComment(lnc, opts)) yield lnc;
       }
@@ -165,26 +177,33 @@ async function* collectComments(opts: CliOptions): AsyncGenerator<LateNightComme
   }
 }
 
+/** Report an error as a single `linus:`-prefixed line on stderr and exit 1. */
+function fail(err: unknown, suffix = ""): void {
+  const message = (err instanceof Error ? err.message : String(err)).replace(/\s*\n\s*/g, " ");
+  console.error(`linus: ${message}${suffix}`);
+  process.exitCode = 1;
+}
+
 async function run() {
-  let opts: CliOptions;
+  let command: Command;
   try {
-    opts = parseCliArgs(process.argv.slice(2));
+    command = parseCliArgs(process.argv.slice(2));
   } catch (err: unknown) {
-    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
-    console.error("Run 'linus --help' for usage.");
-    process.exitCode = 1;
+    fail(err, " (see 'linus --help')");
     return;
   }
 
-  if (opts.help) {
+  if (command.action === "help") {
     console.log(HELP);
     return;
   }
 
-  if (opts.version) {
+  if (command.action === "version") {
     console.log(`linus v${VERSION}`);
     return;
   }
+
+  const { opts } = command;
 
   const useColor = !opts.noColor && process.stdout.isTTY === true;
   const printComment = (cmt: LateNightComment) => {
@@ -209,8 +228,7 @@ async function run() {
       for await (const cmt of collectComments(opts)) printComment(cmt);
     }
   } catch (err: unknown) {
-    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
-    process.exitCode = 1;
+    fail(err);
   }
 }
 

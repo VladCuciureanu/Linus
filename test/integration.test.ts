@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, test } from "node:test";
@@ -19,10 +19,16 @@ async function git(dir: string, args: string[], env?: Record<string, string>) {
   }
 }
 
-async function runLinus(args: string[]): Promise<{ stdout: string; stderr: string; code: number }> {
+async function runLinus(
+  args: string[],
+  {
+    env = { NO_COLOR: "1" },
+    nodeArgs = [],
+  }: { env?: Record<string, string>; nodeArgs?: string[] } = {},
+): Promise<{ stdout: string; stderr: string; code: number }> {
   try {
-    const { stdout, stderr } = await execFileAsync(process.execPath, [MAIN, ...args], {
-      env: { ...process.env, NO_COLOR: "1" },
+    const { stdout, stderr } = await execFileAsync(process.execPath, [...nodeArgs, MAIN, ...args], {
+      env: { ...process.env, ...env },
     });
     return { stdout, stderr, code: 0 };
   } catch (err) {
@@ -147,10 +153,40 @@ test("integration - --help", async () => {
   assert.ok(stdout.includes("USAGE:"));
 });
 
+test("integration - --help aligns option descriptions in one column", async () => {
+  const { stdout } = await runLinus(["--help"]);
+  const optionLines = stdout.split("\n").filter((l) => /^ {2}-/.test(l));
+  assert.ok(optionLines.length > 10);
+  // Column where the description starts: after the flag and a run of 2+ spaces.
+  const columns = new Set(optionLines.map((l) => /^ {2}\S.*? {2,}(?=\S)/.exec(l)?.[0].length));
+  assert.equal(columns.size, 1, optionLines.join("\n"));
+});
+
+test("integration - --help does not hard-code the default time window", async () => {
+  const { stdout } = await runLinus(["--help"]);
+  assert.doesNotMatch(stdout, /written between midnight and 4am/);
+  assert.match(stdout, /--after/);
+});
+
 test("integration - --version", async () => {
   const { stdout, code } = await runLinus(["--version"]);
   assert.deepEqual(code, 0);
   assert.ok(stdout.trim().startsWith("linus v"));
+});
+
+test("integration - --version reads the version from package.json", async () => {
+  const root = await mkdtemp(join(tmpdir(), "linus-version-"));
+  try {
+    await cp(join(import.meta.dirname, "..", "src"), join(root, "src"), { recursive: true });
+    await writeFile(join(root, "package.json"), JSON.stringify({ version: "9.8.7" }));
+    const { stdout } = await execFileAsync(process.execPath, [
+      join(root, "src", "main.ts"),
+      "--version",
+    ]);
+    assert.equal(stdout.trim(), "linus v9.8.7");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 for (const [label, args, expected] of [
@@ -162,14 +198,28 @@ for (const [label, args, expected] of [
   ["invalid --after", ["--after", "25:00"], /Invalid time/],
   ["unknown option", ["--frobnicate"], /--frobnicate/],
   ["extra positional", [".", "other"], /Unexpected argument: "other"/],
+  ["not a repository", [join(tmpdir(), "linus-no-such-dir")], /git log failed/],
 ] as const) {
   test(`integration - ${label} exits 1 with a clean error`, async () => {
     const { stdout, stderr, code } = await runLinus([...args]);
     assert.deepEqual(code, 1);
     assert.deepEqual(stdout, "");
-    assert.match(stderr, /^Error: /);
+    assert.match(stderr, /^linus: [^\n]*\n$/, "expected one linus:-prefixed line");
     assert.match(stderr, expected);
-    assert.doesNotMatch(stderr, /\n\s+at /, "no stack trace expected");
+  });
+}
+
+// Pretend stdout is a terminal so colour depends only on NO_COLOR / --no-color.
+const FAKE_TTY = ["--import", "data:text/javascript,process.stdout.isTTY=true"];
+
+for (const [label, env, colored] of [
+  ["empty NO_COLOR is ignored", { NO_COLOR: "" }, true],
+  ["non-empty NO_COLOR disables colour", { NO_COLOR: "1" }, false],
+] as const) {
+  test(`integration - ${label}`, async () => {
+    const { stdout, code } = await runLinus([dir], { env, nodeArgs: FAKE_TTY });
+    assert.equal(code, 0);
+    assert.equal(stdout.includes("\x1b["), colored);
   });
 }
 

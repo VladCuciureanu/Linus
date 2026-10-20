@@ -1,12 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import {
-  filterByAuthor,
-  filterByGrep,
-  filterByLength,
-  filterByPath,
-  isInTimeWindow,
-} from "../src/filter.ts";
+import { filterByAuthor, filterByPath, filterComment, isInTimeWindow } from "../src/filter.ts";
+import type { LateNightComment } from "../src/types.ts";
 
 // --- isInTimeWindow ---
 
@@ -79,29 +74,54 @@ test("filterByAuthor - no filter passes all", () => {
 test("filterByPath - glob matching", () => {
   assert.deepEqual(filterByPath("src/foo.ts", "src/*.ts"), true);
   assert.deepEqual(filterByPath("lib/foo.ts", "src/*.ts"), false);
-  assert.deepEqual(filterByPath("src/deep/bar.ts", "src/*"), true);
   assert.deepEqual(filterByPath("anything.js", "*.js"), true);
+});
+
+test("filterByPath - * does not cross directories", () => {
+  assert.deepEqual(filterByPath("src/deep/bar.ts", "src/*"), false);
+  assert.deepEqual(filterByPath("src/deep/bar.ts", "*.ts"), false);
+});
+
+test("filterByPath - ** spans directories", () => {
+  assert.deepEqual(filterByPath("src/deep/bar.ts", "src/**"), true);
+  assert.deepEqual(filterByPath("src/deep/bar.ts", "**/*.ts"), true);
+  assert.deepEqual(filterByPath("bar.ts", "**/*.ts"), true);
+  assert.deepEqual(filterByPath("src/deep/bar.js", "**/*.ts"), false);
+});
+
+test("filterByPath - ? matches one character within a segment", () => {
+  assert.deepEqual(filterByPath("src/a.ts", "src/?.ts"), true);
+  assert.deepEqual(filterByPath("src/ab.ts", "src/?.ts"), false);
+  assert.deepEqual(filterByPath("src/a.ts", "src?a.ts"), false);
 });
 
 test("filterByPath - no glob passes all", () => {
   assert.deepEqual(filterByPath("any/file.ts", undefined), true);
 });
 
-// --- filterByGrep ---
+// --- filterComment ---
 
-test("filterByGrep - regex match", () => {
-  assert.deepEqual(filterByGrep("why does this work", /why/i), true);
-  assert.deepEqual(filterByGrep("normal comment", /why/i), false);
+function passes(comment: string, opts: { grep?: RegExp; minLength?: number; pathGlob?: string }) {
+  const lnc = { comment, filePath: "src/foo.ts" } as LateNightComment;
+  return filterComment(lnc, { minLength: 0, ...opts });
+}
+
+test("filterComment - grep regex match", () => {
+  assert.deepEqual(passes("why does this work", { grep: /why/i }), true);
+  assert.deepEqual(passes("normal comment", { grep: /why/i }), false);
 });
 
-test("filterByGrep - no pattern passes all", () => {
-  assert.deepEqual(filterByGrep("anything", undefined), true);
+test("filterComment - no grep pattern passes all", () => {
+  assert.deepEqual(passes("anything", {}), true);
 });
 
-// --- filterByLength ---
+test("filterComment - filters short comments", () => {
+  assert.deepEqual(passes("ok", { minLength: 3 }), false);
+  assert.deepEqual(passes("yes", { minLength: 3 }), true);
+  assert.deepEqual(passes("a longer comment", { minLength: 3 }), true);
+});
 
-test("filterByLength - filters short comments", () => {
-  assert.deepEqual(filterByLength("ok", 3), false);
-  assert.deepEqual(filterByLength("yes", 3), true);
-  assert.deepEqual(filterByLength("a longer comment", 3), true);
+test("filterComment - applies the path glob", () => {
+  assert.deepEqual(passes("comment", { pathGlob: "src/*.ts" }), true);
+  assert.deepEqual(passes("comment", { pathGlob: "lib/*.ts" }), false);
 });

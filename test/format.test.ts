@@ -15,7 +15,7 @@ function makeComment(overrides: Partial<LateNightComment> = {}): LateNightCommen
     filePath: "src/db/connection.ts",
     lineNumber: 42,
     comment: "i think this works but i don't know why",
-    language: "ts",
+    extension: "ts",
     ...overrides,
   };
 }
@@ -44,7 +44,24 @@ test("formatJson - produces valid JSON", () => {
   assert.deepEqual(parsed.comment, "i think this works but i don't know why");
   assert.deepEqual(parsed.filePath, "src/db/connection.ts");
   assert.deepEqual(parsed.lineNumber, 42);
-  assert.deepEqual(parsed.localTime, "2:47 AM");
+  assert.deepEqual(parsed.localTime, "02:47");
+});
+
+test("formatJson - localTime is 24-hour HH:MM", () => {
+  assert.equal(
+    JSON.parse(formatJson(makeComment({ localHour: 0, localMinute: 5 }))).localTime,
+    "00:05",
+  );
+  assert.equal(
+    JSON.parse(formatJson(makeComment({ localHour: 14, localMinute: 30 }))).localTime,
+    "14:30",
+  );
+});
+
+test("formatJson - reports the file extension as `extension`", () => {
+  const parsed = JSON.parse(formatJson(makeComment()));
+  assert.equal(parsed.extension, "ts");
+  assert.ok(!("language" in parsed));
 });
 
 test("formatStats - empty list", () => {
@@ -78,6 +95,15 @@ test("formatPretty - colored card lines have equal visible width", () => {
   const widths = output.split("\n").map((l) => [...stripAnsi(l)].length);
   assert.ok(widths.length > 5);
   for (const w of widths) assert.equal(w, widths[0]);
+});
+
+test("formatPretty - full-width quoted comment lines stay inside the box", () => {
+  const output = formatPretty(
+    makeComment({ comment: `${"x".repeat(60)} ${"y".repeat(51)}` }),
+    false,
+  );
+  const widths = output.split("\n").map((l) => [...l].length);
+  for (const w of widths) assert.equal(w, widths[0], output);
 });
 
 test("formatPretty - shows the author-local date, not the UTC date", () => {

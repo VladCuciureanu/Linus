@@ -77,6 +77,22 @@ test("extractComment - HTML comment", () => {
 
 // --- Unknown extension ---
 
+test("extractComment - CSS block comment", () => {
+  assert.deepEqual(extractComment("a { color: red; } /* why */", "foo.css").comment, "why");
+});
+
+test("extractComment - plain CSS has no // comments", () => {
+  assert.deepEqual(
+    extractComment("a { background: url(//cdn.example.com/x.png); }", "foo.css").comment,
+    null,
+  );
+  assert.deepEqual(extractComment("// not a comment in CSS", "foo.css").comment, null);
+});
+
+test("extractComment - SCSS keeps // comments", () => {
+  assert.deepEqual(extractComment("// scss comment", "foo.scss").comment, "scss comment");
+});
+
 test("extractComment - unknown extension returns null", () => {
   const { comment } = extractComment("// something", "foo.xyz");
   assert.deepEqual(comment, null);
