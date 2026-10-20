@@ -1,9 +1,9 @@
-import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { after, before, test } from "node:test";
 import { promisify } from "node:util";
 import { parseAuthorDate, readGitLog } from "../src/git.ts";
 
@@ -28,7 +28,7 @@ async function createTempRepo(): Promise<string> {
 
   // Commit 1: 2 AM (in the window)
   const file1 = join(dir, "code.ts");
-  await writeFile(file1, '// i am become code\nconst x = 1;\n');
+  await writeFile(file1, "// i am become code\nconst x = 1;\n");
   await run(["add", "."]);
   await run(["commit", "-m", "late night"], {
     GIT_AUTHOR_DATE: "2023-11-14T02:30:00+00:00",
@@ -36,7 +36,10 @@ async function createTempRepo(): Promise<string> {
   });
 
   // Commit 2: 10 AM (outside the window)
-  await writeFile(file1, '// i am become code\nconst x = 1;\n// sensible daytime comment\nconst y = 2;\n');
+  await writeFile(
+    file1,
+    "// i am become code\nconst x = 1;\n// sensible daytime comment\nconst y = 2;\n",
+  );
   await run(["add", "."]);
   await run(["commit", "-m", "daytime"], {
     GIT_AUTHOR_DATE: "2023-11-14T10:00:00+00:00",
@@ -45,7 +48,7 @@ async function createTempRepo(): Promise<string> {
 
   // Commit 3: 3:45 AM (in the window)
   const file2 = join(dir, "util.py");
-  await writeFile(file2, '# why does this work\ndef f(): pass\n');
+  await writeFile(file2, "# why does this work\ndef f(): pass\n");
   await run(["add", "."]);
   await run(["commit", "-m", "more late"], {
     GIT_AUTHOR_DATE: "2023-11-15T03:45:00-05:00",

@@ -29,15 +29,11 @@ export function filterByTime(
 }
 
 /** Check if a commit passes the author filter. */
-export function filterByAuthor(
-  meta: CommitMeta,
-  author?: string,
-): boolean {
+export function filterByAuthor(meta: CommitMeta, author?: string): boolean {
   if (!author) return true;
   const lower = author.toLowerCase();
   return (
-    meta.author.toLowerCase().includes(lower) ||
-    meta.authorEmail.toLowerCase().includes(lower)
+    meta.author.toLowerCase().includes(lower) || meta.authorEmail.toLowerCase().includes(lower)
   );
 }
 

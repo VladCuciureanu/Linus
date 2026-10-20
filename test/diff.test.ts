@@ -1,6 +1,6 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseDiff, getExtension } from "../src/diff.ts";
+import { test } from "node:test";
+import { getExtension, parseDiff } from "../src/diff.ts";
 
 test("parseDiff - single file with added lines", () => {
   const diff = `diff --git a/src/index.ts b/src/index.ts

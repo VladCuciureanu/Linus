@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
-import type { CommitDiff, CommitMeta } from "./types.ts";
 import { parseDiff } from "./diff.ts";
+import type { CommitDiff, CommitMeta } from "./types.ts";
 
 // Delimiter used to separate commit metadata fields in git log output.
 const FIELD_SEP = "†";
@@ -40,9 +40,7 @@ export interface GitLogOptions {
 }
 
 /** Run git log and yield CommitDiff objects one at a time. */
-export async function* readGitLog(
-  opts: GitLogOptions,
-): AsyncGenerator<CommitDiff> {
+export async function* readGitLog(opts: GitLogOptions): AsyncGenerator<CommitDiff> {
   const args = [
     "-C",
     opts.repoPath,

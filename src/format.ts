@@ -33,10 +33,7 @@ function wordWrap(text: string, width: number): string[] {
 }
 
 /** Pretty-print a single comment as a box card. */
-export function formatPretty(
-  comment: LateNightComment,
-  useColor: boolean,
-): string {
+export function formatPretty(comment: LateNightComment, useColor: boolean): string {
   const width = 55;
   const inner = width - 4; // padding inside box
   const time = formatTime(comment.localHour, comment.localMinute);
@@ -50,7 +47,10 @@ export function formatPretty(
   const pad = (s: string, w: number) => s + " ".repeat(Math.max(0, w - stripAnsi(s).length));
   const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
 
-  const h1 = c(BOLD + CYAN, time, useColor) + c(DIM, ` · ${date} · `, useColor) + c(YELLOW, `@${comment.author}`, useColor);
+  const h1 =
+    c(BOLD + CYAN, time, useColor) +
+    c(DIM, ` · ${date} · `, useColor) +
+    c(YELLOW, `@${comment.author}`, useColor);
   const h2 = c(DIM, `${comment.hash} · ${comment.filePath}`, useColor);
 
   const lines = [top];
@@ -128,10 +128,7 @@ export function formatStatsJson(comments: LateNightComment[]): string {
 }
 
 /** Generate stats summary from a list of comments. */
-export function formatStats(
-  comments: LateNightComment[],
-  useColor: boolean,
-): string {
+export function formatStats(comments: LateNightComment[], useColor: boolean): string {
   const stats = computeStats(comments);
   const { busiestHour, topAuthor, topFile } = stats;
   if (!busiestHour || !topAuthor || !topFile) {

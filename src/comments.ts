@@ -41,18 +41,64 @@ function register(exts: string[], style: CommentStyle) {
 }
 
 register(
-  ["ts", "tsx", "js", "jsx", "mjs", "cjs", "java", "kt", "kts",
-   "c", "h", "cpp", "cc", "cxx", "hpp", "cs", "go", "swift",
-   "scala", "dart", "m", "mm", "zig", "v", "groovy", "gradle"],
+  [
+    "ts",
+    "tsx",
+    "js",
+    "jsx",
+    "mjs",
+    "cjs",
+    "java",
+    "kt",
+    "kts",
+    "c",
+    "h",
+    "cpp",
+    "cc",
+    "cxx",
+    "hpp",
+    "cs",
+    "go",
+    "swift",
+    "scala",
+    "dart",
+    "m",
+    "mm",
+    "zig",
+    "v",
+    "groovy",
+    "gradle",
+  ],
   STYLES.clike,
 );
 register(["rs"], STYLES.rust);
 register(["py", "pyi"], STYLES.python);
 register(["rb", "rake", "gemspec"], STYLES.ruby);
 register(
-  ["sh", "bash", "zsh", "fish", "yml", "yaml", "toml", "ini", "conf",
-   "dockerfile", "makefile", "cmake", "r", "pl", "pm", "t", "ex", "exs",
-   "elixir", "nim", "cr", "jl"],
+  [
+    "sh",
+    "bash",
+    "zsh",
+    "fish",
+    "yml",
+    "yaml",
+    "toml",
+    "ini",
+    "conf",
+    "dockerfile",
+    "makefile",
+    "cmake",
+    "r",
+    "pl",
+    "pm",
+    "t",
+    "ex",
+    "exs",
+    "elixir",
+    "nim",
+    "cr",
+    "jl",
+  ],
   STYLES.hash,
 );
 register(["html", "htm", "xml", "svg", "vue", "svelte", "md"], STYLES.html);
@@ -124,7 +170,10 @@ export function extractComment(
   if (block.active) {
     const endIdx = trimmed.indexOf(block.endMarker);
     if (endIdx !== -1) {
-      const text = trimmed.slice(0, endIdx).replace(/^\*\s?/, "").trim();
+      const text = trimmed
+        .slice(0, endIdx)
+        .replace(/^\*\s?/, "")
+        .trim();
       return {
         comment: text || null,
         block: { active: false, endMarker: "" },

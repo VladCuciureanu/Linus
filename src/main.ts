@@ -1,15 +1,11 @@
 #!/usr/bin/env node
 import { parseArgs } from "node:util";
-import type { CliOptions, LateNightComment } from "./types.ts";
-import { readGitLog } from "./git.ts";
-import { getExtension } from "./diff.ts";
 import { extractCommentsFromLines } from "./comments.ts";
-import {
-  filterByTime,
-  filterByAuthor,
-  filterComment,
-} from "./filter.ts";
-import { formatPretty, formatJson, formatStats, formatStatsJson } from "./format.ts";
+import { getExtension } from "./diff.ts";
+import { filterByAuthor, filterByTime, filterComment } from "./filter.ts";
+import { formatJson, formatPretty, formatStats, formatStatsJson } from "./format.ts";
+import { readGitLog } from "./git.ts";
+import type { CliOptions, LateNightComment } from "./types.ts";
 
 const VERSION = "0.1.0";
 
@@ -97,7 +93,9 @@ function parseCliArgs(args: string[]): CliOptions {
   });
 
   if (positionals.length > 1) {
-    throw new Error(`Unexpected argument: "${positionals[1]}" (only one repository path is accepted)`);
+    throw new Error(
+      `Unexpected argument: "${positionals[1]}" (only one repository path is accepted)`,
+    );
   }
 
   const minLength = values["min-length"];

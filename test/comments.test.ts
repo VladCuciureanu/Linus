@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import { extractComment, extractCommentsFromLines } from "../src/comments.ts";
 
 // --- Single-line comments ---
@@ -154,8 +154,14 @@ test("extractComment - LaTeX apostrophe before % does not hide the comment", () 
 });
 
 test("extractComment - Markdown/HTML apostrophe before <!-- does not hide the comment", () => {
-  assert.deepEqual(extractComment("It's late <!-- we'll fix this -->", "README.md").comment, "we'll fix this");
-  assert.deepEqual(extractComment("It's late <!-- we'll fix this -->", "index.html").comment, "we'll fix this");
+  assert.deepEqual(
+    extractComment("It's late <!-- we'll fix this -->", "README.md").comment,
+    "we'll fix this",
+  );
+  assert.deepEqual(
+    extractComment("It's late <!-- we'll fix this -->", "index.html").comment,
+    "we'll fix this",
+  );
 });
 
 test("extractComment - Elisp quote before ; does not hide the comment", () => {
