@@ -8,7 +8,8 @@ const YELLOW = "\x1b[33m";
 const MAGENTA = "\x1b[35m";
 const WHITE = "\x1b[37m";
 
-function c(code: string, text: string, color: boolean): string {
+/** Wrap `text` in an ANSI style `code` when colour is enabled. */
+function paint(code: string, text: string, color: boolean): string {
   return color ? `${code}${text}${RESET}` : text;
 }
 
@@ -49,22 +50,22 @@ export function formatPretty(comment: LateNightComment, useColor: boolean): stri
   const mid = `├${"─".repeat(width - 2)}┤`;
   const bot = `└${"─".repeat(width - 2)}┘`;
 
-  const pad = (s: string, w: number) => s + " ".repeat(Math.max(0, w - stripAnsi(s).length));
   // biome-ignore lint/suspicious/noControlCharactersInRegex: matches ANSI escape sequences
   const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
+  const pad = (s: string, w: number) => s + " ".repeat(Math.max(0, w - stripAnsi(s).length));
 
   const h1 =
-    c(BOLD + CYAN, time, useColor) +
-    c(DIM, ` · ${date} · `, useColor) +
-    c(YELLOW, `@${comment.author}`, useColor);
-  const h2 = c(DIM, `${comment.hash} · ${comment.filePath}`, useColor);
+    paint(BOLD + CYAN, time, useColor) +
+    paint(DIM, ` · ${date} · `, useColor) +
+    paint(YELLOW, `@${comment.author}`, useColor);
+  const h2 = paint(DIM, `${comment.hash} · ${comment.filePath}`, useColor);
 
   const lines = [top];
   lines.push(`│ ${pad(h1, inner)} │`);
   lines.push(`│ ${pad(h2, inner)} │`);
   lines.push(mid);
   for (const cl of commentLines) {
-    const styled = c(WHITE + BOLD, `"${cl}"`, useColor);
+    const styled = paint(WHITE + BOLD, `"${cl}"`, useColor);
     lines.push(`│ ${pad(styled, inner)} │`);
   }
   lines.push(bot);
@@ -142,21 +143,21 @@ export function formatStats(comments: LateNightComment[], useColor: boolean): st
   }
 
   const lines = [
-    c(BOLD + MAGENTA, "── Stats ──", useColor),
-    `Total late-night comments: ${c(BOLD, String(stats.total), useColor)}`,
-    `Busiest hour: ${c(BOLD, `${busiestHour.hour}:00`, useColor)} (${busiestHour.count} comments)`,
-    `Most prolific night owl: ${c(BOLD, topAuthor.name, useColor)} (${topAuthor.count} comments)`,
-    `Most commented file: ${c(BOLD, topFile.path, useColor)} (${topFile.count} comments)`,
+    paint(BOLD + MAGENTA, "── Stats ──", useColor),
+    `Total late-night comments: ${paint(BOLD, String(stats.total), useColor)}`,
+    `Busiest hour: ${paint(BOLD, `${busiestHour.hour}:00`, useColor)} (${busiestHour.count} comments)`,
+    `Most prolific night owl: ${paint(BOLD, topAuthor.name, useColor)} (${topAuthor.count} comments)`,
+    `Most commented file: ${paint(BOLD, topFile.path, useColor)} (${topFile.count} comments)`,
   ];
 
   // Hour histogram
   lines.push("");
-  lines.push(c(DIM, "Hour distribution:", useColor));
+  lines.push(paint(DIM, "Hour distribution:", useColor));
   const maxCount = Math.max(...stats.hourDistribution.map((h) => h.count));
   const barWidth = 30;
   for (const { hour, count } of stats.hourDistribution) {
     const bar = "█".repeat(Math.max(1, Math.round((count / maxCount) * barWidth)));
-    lines.push(`  ${String(hour).padStart(2)}:00 ${c(CYAN, bar, useColor)} ${count}`);
+    lines.push(`  ${String(hour).padStart(2)}:00 ${paint(CYAN, bar, useColor)} ${count}`);
   }
 
   return lines.join("\n");
