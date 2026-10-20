@@ -55,6 +55,32 @@ async function createTempRepo(): Promise<string> {
   return dir;
 }
 
+async function git(cwd: string, args: string[], env?: Record<string, string>) {
+  try {
+    await execFileAsync("git", ["-C", cwd, ...args], { env: { ...process.env, ...env } });
+  } catch {
+    throw new Error(`git ${args.join(" ")} failed`);
+  }
+}
+
+/** Create an empty repo for a single test; removed again when the test ends. */
+async function emptyRepo(t: { after: (fn: () => Promise<void>) => void }): Promise<string> {
+  const repo = await mkdtemp(join(tmpdir(), "linus-test-"));
+  t.after(() => rm(repo, { recursive: true, force: true }));
+  await git(repo, ["init"]);
+  await git(repo, ["config", "user.name", "Test User"]);
+  await git(repo, ["config", "user.email", "test@example.com"]);
+  return repo;
+}
+
+async function commitAll(repo: string, message: string, isoDate: string) {
+  await git(repo, ["add", "-A"]);
+  await git(repo, ["commit", "-m", message], {
+    GIT_AUTHOR_DATE: isoDate,
+    GIT_COMMITTER_DATE: isoDate,
+  });
+}
+
 let dir: string;
 
 before(async () => {
@@ -105,6 +131,27 @@ test("readGitLog - added lines have correct file paths", async () => {
   const pyLines = commits[0].addedLines.filter((l) => l.filePath === "util.py");
   assert.ok(pyLines.length > 0);
   assert.ok(pyLines.some((l) => l.content.includes("why does this work")));
+});
+
+test("readGitLog - diff lines that look like metadata stay in the diff", async (t) => {
+  const repo = await emptyRepo(t);
+  await writeFile(join(repo, "a.ts"), "// first\n");
+  await commitAll(repo, "first", "2023-11-14T02:00:00+00:00");
+  // An added line shaped exactly like our metadata line.
+  const tricky = "x†Mallory†m@example.com†2020-01-01T12:00:00+00:00";
+  await writeFile(join(repo, "b.txt"), `${tricky}\nafter\n`);
+  await commitAll(repo, "second", "2023-11-15T03:00:00+00:00");
+
+  const commits = [];
+  for await (const commit of readGitLog({ repoPath: repo })) commits.push(commit);
+
+  assert.deepEqual(commits.length, 2);
+  assert.deepEqual(commits[0].meta.author, "Test User");
+  assert.deepEqual(commits[0].meta.localHour, 3);
+  assert.deepEqual(
+    commits[0].addedLines.map((l) => l.content),
+    [tricky, "after"],
+  );
 });
 
 // --- parseAuthorDate ---

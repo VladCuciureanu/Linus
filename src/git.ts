@@ -76,6 +76,7 @@ export async function* readGitLog(
   let buffer = "";
   let currentMeta: CommitMeta | null = null;
   let currentDiffLines: string[] = [];
+  let expectMeta = false;
 
   function flushCommit(): CommitDiff | null {
     if (!currentMeta) return null;
@@ -111,16 +112,17 @@ export async function* readGitLog(
         if (line === RECORD_SEP) {
           const commit = flushCommit();
           if (commit) yield commit;
+          expectMeta = true;
           continue;
         }
 
-        // Check if this is a metadata line (contains our field separator)
-        if (line.includes(FIELD_SEP)) {
-          const meta = parseMetaLine(line);
-          if (meta) {
-            currentMeta = meta;
-            continue;
-          }
+        // The metadata line is always the one right after the record
+        // separator; diff content that happens to contain FIELD_SEP must not
+        // be mistaken for it.
+        if (expectMeta) {
+          expectMeta = false;
+          currentMeta = parseMetaLine(line);
+          continue;
         }
 
         // Otherwise it's part of the diff
