@@ -20,6 +20,7 @@ interface CommentStyle {
 
 const STYLES: Record<string, CommentStyle> = {
   clike: { single: ["//"], blockStart: "/*", blockEnd: "*/", quotes: '"`', singleQuote: "string" },
+  css: { single: [], blockStart: "/*", blockEnd: "*/", quotes: `"'` },
   rust: { single: ["//"], blockStart: "/*", blockEnd: "*/", quotes: '"', singleQuote: "char" },
   hash: { single: ["#"], quotes: `"'` },
   html: { single: [], blockStart: "<!--", blockEnd: "-->", quotes: "" },
@@ -106,7 +107,9 @@ register(["lua"], STYLES.lua);
 register(["sql", "psql", "plsql"], STYLES.sql);
 register(["el", "lisp", "cl", "clj", "cljs", "scm", "rkt"], STYLES.lisp);
 register(["tex", "sty", "cls", "bib", "erl", "hrl", "matlab"], STYLES.latex);
-register(["css", "scss", "sass", "less"], STYLES.clike);
+// Plain CSS only has block comments; the preprocessors also allow `//`.
+register(["css"], STYLES.css);
+register(["scss", "sass", "less"], STYLES.clike);
 
 /** Files identified by their (lowercased) basename rather than extension. */
 const BASENAME_TO_STYLE: Record<string, CommentStyle> = {
