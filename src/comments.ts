@@ -5,19 +5,34 @@ interface CommentStyle {
   single: string[];
   blockStart?: string;
   blockEnd?: string;
+  /** Characters that always delimit string literals in this language. */
+  quotes: string;
+  /**
+   * How `'` is treated when it is not listed in `quotes`:
+   * - "string": opens a string unless it directly follows a word character,
+   *   so apostrophes in prose (`Don't`, `it's`, e.g. JSX text) are not strings.
+   * - "char": only a Rust-style char literal (`'x'`, `'\n'`, `'\u{1F600}'`),
+   *   so lifetimes like `'a` are not strings.
+   * Omitted: `'` is an ordinary character.
+   */
+  singleQuote?: "string" | "char";
 }
 
 const STYLES: Record<string, CommentStyle> = {
-  clike: { single: ["//"], blockStart: "/*", blockEnd: "*/" },
-  hash: { single: ["#"] },
-  html: { single: [], blockStart: "<!--", blockEnd: "-->" },
-  lua: { single: ["--"], blockStart: "--[[", blockEnd: "]]" },
-  sql: { single: ["--"], blockStart: "/*", blockEnd: "*/" },
-  lisp: { single: [";"] },
-  latex: { single: ["%"] },
-  python: { single: ["#"], blockStart: '"""', blockEnd: '"""' },
-  ruby: { single: ["#"], blockStart: "=begin", blockEnd: "=end" },
+  clike: { single: ["//"], blockStart: "/*", blockEnd: "*/", quotes: '"`', singleQuote: "string" },
+  rust: { single: ["//"], blockStart: "/*", blockEnd: "*/", quotes: '"', singleQuote: "char" },
+  hash: { single: ["#"], quotes: `"'` },
+  html: { single: [], blockStart: "<!--", blockEnd: "-->", quotes: "" },
+  lua: { single: ["--"], blockStart: "--[[", blockEnd: "]]", quotes: `"'` },
+  sql: { single: ["--"], blockStart: "/*", blockEnd: "*/", quotes: `"'` },
+  lisp: { single: [";"], quotes: '"' },
+  latex: { single: ["%"], quotes: "" },
+  python: { single: ["#"], blockStart: '"""', blockEnd: '"""', quotes: `"'` },
+  ruby: { single: ["#"], blockStart: "=begin", blockEnd: "=end", quotes: `"'` },
 };
+
+/** A Rust char literal at the start of a string: 'x', '\n', '\x41', '\u{1F600}'. */
+const RUST_CHAR_LITERAL = /^'(?:[^'\\]|\\(?:u\{[0-9a-fA-F]{1,6}\}|x[0-9a-fA-F]{2}|.))'/u;
 
 const EXT_TO_STYLE: Record<string, CommentStyle> = {};
 
@@ -27,10 +42,11 @@ function register(exts: string[], style: CommentStyle) {
 
 register(
   ["ts", "tsx", "js", "jsx", "mjs", "cjs", "java", "kt", "kts",
-   "c", "h", "cpp", "cc", "cxx", "hpp", "cs", "go", "rs", "swift",
+   "c", "h", "cpp", "cc", "cxx", "hpp", "cs", "go", "swift",
    "scala", "dart", "m", "mm", "zig", "v", "groovy", "gradle"],
   STYLES.clike,
 );
+register(["rs"], STYLES.rust);
 register(["py", "pyi"], STYLES.python);
 register(["rb", "rake", "gemspec"], STYLES.ruby);
 register(
@@ -124,8 +140,8 @@ export function extractComment(
 
   // Check block comment start
   if (style.blockStart && style.blockEnd) {
-    const bsIdx = indexOutsideStrings(trimmed, style.blockStart);
-    if (bsIdx !== -1 && (style.single.length === 0 || bsIdx <= firstSingleIdx(trimmed, style.single))) {
+    const bsIdx = indexOutsideStrings(trimmed, style.blockStart, style);
+    if (bsIdx !== -1 && (style.single.length === 0 || bsIdx <= firstSingleIdx(trimmed, style))) {
       const afterStart = trimmed.slice(bsIdx + style.blockStart.length);
       const endIdx = afterStart.indexOf(style.blockEnd);
       if (endIdx !== -1) {
@@ -147,7 +163,7 @@ export function extractComment(
 
   // Check single-line comments
   for (const marker of style.single) {
-    const idx = indexOutsideStrings(trimmed, marker);
+    const idx = indexOutsideStrings(trimmed, marker, style);
     if (idx !== -1) {
       // Simple heuristic: if the marker appears at the start or after whitespace/code
       // For '#' in particular, skip shebang lines
@@ -160,28 +176,38 @@ export function extractComment(
   return { comment: null, block };
 }
 
-const QUOTES = new Set(["'", '"', "`"]);
-
 /**
- * Find the first occurrence of `marker` in `line` that is not inside a
- * single-, double-, or backtick-quoted string literal. Backslash escapes
+ * Find the first occurrence of `marker` in `line` that is not inside a string
+ * literal, using only the quote characters of `style`. Backslash escapes
  * inside strings are honored. A quote with no closing quote on the same line
- * is treated as an ordinary character (e.g. Rust lifetimes, Lisp quotes).
- * Returns -1 if not found.
+ * is treated as an ordinary character. Returns -1 if not found.
  */
-function indexOutsideStrings(line: string, marker: string): number {
+function indexOutsideStrings(line: string, marker: string, style: CommentStyle): number {
   let i = 0;
   while (i < line.length) {
     if (line.startsWith(marker, i)) return i;
-    const ch = line[i];
-    if (QUOTES.has(ch)) {
-      const close = findClosingQuote(line, i + 1, ch);
-      if (close !== -1) {
-        i = close + 1;
-        continue;
-      }
+    const close = stringEnd(line, i, style);
+    if (close !== -1) {
+      i = close + 1;
+      continue;
     }
     i++;
+  }
+  return -1;
+}
+
+/** If a string literal starts at `i`, return the index of its closing quote, else -1. */
+function stringEnd(line: string, i: number, style: CommentStyle): number {
+  const ch = line[i];
+  if (style.quotes.includes(ch)) return findClosingQuote(line, i + 1, ch);
+  if (ch !== "'") return -1;
+  if (style.singleQuote === "string") {
+    if (i > 0 && /\w/.test(line[i - 1])) return -1;
+    return findClosingQuote(line, i + 1, ch);
+  }
+  if (style.singleQuote === "char") {
+    const m = RUST_CHAR_LITERAL.exec(line.slice(i));
+    return m ? i + m[0].length - 1 : -1;
   }
   return -1;
 }
@@ -197,10 +223,10 @@ function findClosingQuote(line: string, from: number, quote: string): number {
   return -1;
 }
 
-function firstSingleIdx(line: string, markers: string[]): number {
+function firstSingleIdx(line: string, style: CommentStyle): number {
   let min = Infinity;
-  for (const m of markers) {
-    const idx = indexOutsideStrings(line, m);
+  for (const m of style.single) {
+    const idx = indexOutsideStrings(line, m, style);
     if (idx !== -1 && idx < min) min = idx;
   }
   return min;

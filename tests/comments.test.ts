@@ -146,6 +146,55 @@ test("extractComment - ignores # inside string literals", () => {
   assert.deepEqual(extractComment(`color = "#fff"  # hex value`, "foo.py").comment, "hex value");
 });
 
+// --- Apostrophes are only string delimiters where the language says so ---
+
+test("extractComment - LaTeX apostrophe before % does not hide the comment", () => {
+  const { comment } = extractComment("We can't do this. % TODO: don't forget", "paper.tex");
+  assert.deepEqual(comment, "TODO: don't forget");
+});
+
+test("extractComment - Markdown/HTML apostrophe before <!-- does not hide the comment", () => {
+  assert.deepEqual(extractComment("It's late <!-- we'll fix this -->", "README.md").comment, "we'll fix this");
+  assert.deepEqual(extractComment("It's late <!-- we'll fix this -->", "index.html").comment, "we'll fix this");
+});
+
+test("extractComment - Elisp quote before ; does not hide the comment", () => {
+  const { comment } = extractComment("(setq x 'foo) ; don't touch", "init.el");
+  assert.deepEqual(comment, "don't touch");
+});
+
+test("extractComment - Elisp still skips ; inside double-quoted strings", () => {
+  assert.deepEqual(extractComment(`(message "a; b")`, "init.el").comment, null);
+});
+
+test("extractComment - Rust lifetimes do not hide the comment", () => {
+  const { comment } = extractComment("fn f<'a>(x: &'a str, y: &'a str) // don't panic", "lib.rs");
+  assert.deepEqual(comment, "don't panic");
+});
+
+test("extractComment - Rust char literals and strings are still skipped", () => {
+  assert.deepEqual(extractComment(`let q = '"'; // quote char`, "lib.rs").comment, "quote char");
+  assert.deepEqual(extractComment(`let s = "a // b";`, "lib.rs").comment, null);
+  assert.deepEqual(extractComment(`let c = '\\''; // escaped`, "lib.rs").comment, "escaped");
+});
+
+test("extractComment - TSX apostrophe in JSX text does not hide the comment", () => {
+  const { comment } = extractComment("<p>Don't click</p> {/* it's broken */}", "App.tsx");
+  assert.deepEqual(comment, "it's broken");
+});
+
+test("extractComment - // inside a normal JS single-quoted string is not a comment", () => {
+  assert.deepEqual(extractComment(`const u = 'http://x'; // real`, "foo.js").comment, "real");
+  assert.deepEqual(extractComment(`const u = 'http://x';`, "foo.js").comment, null);
+  assert.deepEqual(extractComment(`f('a', 'b // c');`, "foo.jsx").comment, null);
+  assert.deepEqual(extractComment(`const u = "http://x";`, "foo.js").comment, null);
+});
+
+test("extractComment - Python still skips # inside single-quoted strings", () => {
+  assert.deepEqual(extractComment(`s = 'a # b'`, "foo.py").comment, null);
+  assert.deepEqual(extractComment(`s = 'a # b'  # note`, "foo.py").comment, "note");
+});
+
 test("extractCommentsFromLines - block state does not carry across hunk gaps", () => {
   const lines = [
     { lineNumber: 10, content: "/* opened in one hunk" },
