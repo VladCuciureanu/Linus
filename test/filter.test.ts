@@ -79,8 +79,25 @@ test("filterByAuthor - no filter passes all", () => {
 test("filterByPath - glob matching", () => {
   assert.deepEqual(filterByPath("src/foo.ts", "src/*.ts"), true);
   assert.deepEqual(filterByPath("lib/foo.ts", "src/*.ts"), false);
-  assert.deepEqual(filterByPath("src/deep/bar.ts", "src/*"), true);
   assert.deepEqual(filterByPath("anything.js", "*.js"), true);
+});
+
+test("filterByPath - * does not cross directories", () => {
+  assert.deepEqual(filterByPath("src/deep/bar.ts", "src/*"), false);
+  assert.deepEqual(filterByPath("src/deep/bar.ts", "*.ts"), false);
+});
+
+test("filterByPath - ** spans directories", () => {
+  assert.deepEqual(filterByPath("src/deep/bar.ts", "src/**"), true);
+  assert.deepEqual(filterByPath("src/deep/bar.ts", "**/*.ts"), true);
+  assert.deepEqual(filterByPath("bar.ts", "**/*.ts"), true);
+  assert.deepEqual(filterByPath("src/deep/bar.js", "**/*.ts"), false);
+});
+
+test("filterByPath - ? matches one character within a segment", () => {
+  assert.deepEqual(filterByPath("src/a.ts", "src/?.ts"), true);
+  assert.deepEqual(filterByPath("src/ab.ts", "src/?.ts"), false);
+  assert.deepEqual(filterByPath("src/a.ts", "src?a.ts"), false);
 });
 
 test("filterByPath - no glob passes all", () => {

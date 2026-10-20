@@ -38,7 +38,7 @@ linus [options] [path]
 | `--before <HH:MM>` | End of the time window, exclusive (default `04:00`). A window may wrap midnight, e.g. `--after 22:00 --before 06:00` |
 | `--author <text>` | Case-insensitive substring match on author name or email |
 | `--since <date>`, `--until <date>` | Passed to `git log` as-is |
-| `--path <glob>` | Match the file path against a glob; `*` matches any characters, including `/` |
+| `--path <glob>` | Keep only files whose repo-relative path matches the glob. `*` and `?` match within one directory level and `**` spans directories (e.g. `src/**/*.ts`). Matching uses Node's `path.matchesGlob`, so files under dot-directories need an explicit `.` in the pattern |
 | `--grep <regex>` | Keep only comments matching a JavaScript regular expression |
 | `--min-length <n>` | Minimum comment length in characters (default `3`) |
 | `--max-commits <n>` | Scan at most `n` commits |
@@ -50,7 +50,7 @@ linus [options] [path]
 | `-V`, `--version` | Show version |
 
 ```sh
-linus ~/src/legacy-billing --grep "why|sorry" --path "*.ts"
+linus ~/src/legacy-billing --grep "why|sorry" --path "**/*.ts"
 linus --author rickson --stats
 linus --json | jq -r .comment   # requires jq
 ```

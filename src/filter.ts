@@ -1,3 +1,4 @@
+import { posix } from "node:path";
 import type { CliOptions, CommitMeta, LateNightComment } from "./types.ts";
 
 /** Check if a given hour:minute falls within the time window [after, before). */
@@ -37,14 +38,14 @@ export function filterByAuthor(meta: CommitMeta, author?: string): boolean {
   );
 }
 
-/** Check if a file path matches a glob pattern (simple substring/wildcard match). */
+/**
+ * Check if a repo-relative file path matches a glob: `*` and `?` stay within
+ * one path segment, `**` spans directories. Git paths always use `/`, so the
+ * POSIX matcher is used on every platform.
+ */
 export function filterByPath(filePath: string, pathGlob?: string): boolean {
   if (!pathGlob) return true;
-  // Simple glob: support * as wildcard
-  const regex = new RegExp(
-    `^${pathGlob.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")}$`,
-  );
-  return regex.test(filePath);
+  return posix.matchesGlob(filePath, pathGlob);
 }
 
 /** Check if a comment matches the grep pattern. */
