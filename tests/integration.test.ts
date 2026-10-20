@@ -19,16 +19,17 @@ async function git(dir: string, args: string[], env?: Record<string, string>) {
   }
 }
 
-async function runLinus(args: string[]): Promise<{ stdout: string; code: number }> {
+async function runLinus(args: string[]): Promise<{ stdout: string; stderr: string; code: number }> {
   try {
-    const { stdout } = await execFileAsync(process.execPath, [MAIN, ...args], {
+    const { stdout, stderr } = await execFileAsync(process.execPath, [MAIN, ...args], {
       env: { ...process.env, NO_COLOR: "1" },
     });
-    return { stdout, code: 0 };
+    return { stdout, stderr, code: 0 };
   } catch (err) {
-    const e = err as { stdout?: string; code?: unknown };
+    const e = err as { stdout?: string; stderr?: string; code?: unknown };
     return {
       stdout: e.stdout ?? "",
+      stderr: e.stderr ?? "",
       code: typeof e.code === "number" ? e.code : 1,
     };
   }
@@ -147,4 +148,31 @@ test("integration - --version", async () => {
   const { stdout, code } = await runLinus(["--version"]);
   assert.deepEqual(code, 0);
   assert.ok(stdout.trim().startsWith("linus v"));
+});
+
+for (const [label, args, expected] of [
+  ["missing option value", ["--author"], /--author/],
+  ["invalid --grep regex", ["--grep", "("], /Invalid --grep pattern/],
+  ["non-numeric --min-length", ["--min-length", "abc"], /Invalid value for --min-length: "abc"/],
+  ["non-numeric --max-commits", ["--max-commits", "1x"], /Invalid value for --max-commits: "1x"/],
+  ["zero --max-commits", ["--max-commits", "0"], /Invalid value for --max-commits: "0"/],
+  ["invalid --after", ["--after", "25:00"], /Invalid time/],
+  ["unknown option", ["--frobnicate"], /--frobnicate/],
+  ["extra positional", [".", "other"], /Unexpected argument: "other"/],
+] as const) {
+  test(`integration - ${label} exits 1 with a clean error`, async () => {
+    const { stdout, stderr, code } = await runLinus([...args]);
+    assert.deepEqual(code, 1);
+    assert.deepEqual(stdout, "");
+    assert.match(stderr, /^Error: /);
+    assert.match(stderr, expected);
+    assert.doesNotMatch(stderr, /\n\s+at /, "no stack trace expected");
+  });
+}
+
+test("integration - --min-length accepts a valid number", async () => {
+  const { stdout, code } = await runLinus(["--json", "--min-length", "22", dir]);
+  assert.deepEqual(code, 0);
+  const lines = stdout.trim().split("\n").filter(Boolean);
+  assert.deepEqual(lines.map((l) => JSON.parse(l).comment), ["why does this even work"]);
 });
