@@ -14,7 +14,7 @@
 
 ## Install
 
-**Requirements:** [Node.js](https://nodejs.org/) 24 or newer and `git`.
+**Requirements:** [Node.js](https://nodejs.org/) 26 or newer and `git`.
 
 ### Run from source
 
