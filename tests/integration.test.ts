@@ -1,4 +1,4 @@
-import { test } from "node:test";
+import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -78,77 +78,62 @@ async function createTestRepo(): Promise<string> {
   return dir;
 }
 
+let dir: string;
+
+before(async () => {
+  dir = await createTestRepo();
+});
+
+after(async () => {
+  if (dir) await rm(dir, { recursive: true, force: true });
+});
+
 test("integration - finds late-night comments", async () => {
-  const dir = await createTestRepo();
-  try {
-    const { stdout, code } = await runLinus(["--json", dir]);
-    assert.deepEqual(code, 0);
-    const lines = stdout.trim().split("\n").filter(Boolean);
-    assert.deepEqual(lines.length, 3);
-    const comments = lines.map((l) => JSON.parse(l));
+  const { stdout, code } = await runLinus(["--json", dir]);
+  assert.deepEqual(code, 0);
+  const lines = stdout.trim().split("\n").filter(Boolean);
+  assert.deepEqual(lines.length, 3);
+  const comments = lines.map((l) => JSON.parse(l));
 
-    // Newest first
-    assert.ok(comments.some((c: Record<string, unknown>) => c.comment === "why does this even work"));
-    assert.ok(comments.some((c: Record<string, unknown>) => c.comment === "sleep is for the weak"));
-    assert.ok(comments.some((c: Record<string, unknown>) => c.comment === "the void stares back"));
+  // Newest first
+  assert.ok(comments.some((c: Record<string, unknown>) => c.comment === "why does this even work"));
+  assert.ok(comments.some((c: Record<string, unknown>) => c.comment === "sleep is for the weak"));
+  assert.ok(comments.some((c: Record<string, unknown>) => c.comment === "the void stares back"));
 
-    // "normal comment" from the 14:00 commit should NOT appear
-    assert.ok(!comments.some((c: Record<string, unknown>) => c.comment === "normal comment"));
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
+  // "normal comment" from the 14:00 commit should NOT appear
+  assert.ok(!comments.some((c: Record<string, unknown>) => c.comment === "normal comment"));
 });
 
 test("integration - --author filter", async () => {
-  const dir = await createTestRepo();
-  try {
-    const { stdout, code } = await runLinus(["--json", "--author", "Night Owl", dir]);
-    assert.deepEqual(code, 0);
-    const lines = stdout.trim().split("\n").filter(Boolean);
-    assert.deepEqual(lines.length, 1);
-    const c = JSON.parse(lines[0]);
-    assert.deepEqual(c.author, "Night Owl");
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
+  const { stdout, code } = await runLinus(["--json", "--author", "Night Owl", dir]);
+  assert.deepEqual(code, 0);
+  const lines = stdout.trim().split("\n").filter(Boolean);
+  assert.deepEqual(lines.length, 1);
+  const c = JSON.parse(lines[0]);
+  assert.deepEqual(c.author, "Night Owl");
 });
 
 test("integration - --grep filter", async () => {
-  const dir = await createTestRepo();
-  try {
-    const { stdout, code } = await runLinus(["--json", "--grep", "void", dir]);
-    assert.deepEqual(code, 0);
-    const lines = stdout.trim().split("\n").filter(Boolean);
-    assert.deepEqual(lines.length, 1);
-    assert.ok(JSON.parse(lines[0]).comment.includes("void"));
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
+  const { stdout, code } = await runLinus(["--json", "--grep", "void", dir]);
+  assert.deepEqual(code, 0);
+  const lines = stdout.trim().split("\n").filter(Boolean);
+  assert.deepEqual(lines.length, 1);
+  assert.ok(JSON.parse(lines[0]).comment.includes("void"));
 });
 
 test("integration - --path filter", async () => {
-  const dir = await createTestRepo();
-  try {
-    const { stdout, code } = await runLinus(["--json", "--path", "*.py", dir]);
-    assert.deepEqual(code, 0);
-    const lines = stdout.trim().split("\n").filter(Boolean);
-    assert.deepEqual(lines.length, 1);
-    assert.deepEqual(JSON.parse(lines[0]).filePath, "util.py");
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
+  const { stdout, code } = await runLinus(["--json", "--path", "*.py", dir]);
+  assert.deepEqual(code, 0);
+  const lines = stdout.trim().split("\n").filter(Boolean);
+  assert.deepEqual(lines.length, 1);
+  assert.deepEqual(JSON.parse(lines[0]).filePath, "util.py");
 });
 
 test("integration - --stats flag", async () => {
-  const dir = await createTestRepo();
-  try {
-    const { stdout, code } = await runLinus(["--stats", dir]);
-    assert.deepEqual(code, 0);
-    assert.ok(stdout.includes("Total late-night comments: 3"));
-    assert.ok(stdout.includes("Stats"));
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
+  const { stdout, code } = await runLinus(["--stats", dir]);
+  assert.deepEqual(code, 0);
+  assert.ok(stdout.includes("Total late-night comments: 3"));
+  assert.ok(stdout.includes("Stats"));
 });
 
 test("integration - --help", async () => {

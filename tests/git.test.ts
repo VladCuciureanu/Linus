@@ -1,4 +1,4 @@
-import { test } from "node:test";
+import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -55,59 +55,54 @@ async function createTempRepo(): Promise<string> {
   return dir;
 }
 
+let dir: string;
+
+before(async () => {
+  dir = await createTempRepo();
+});
+
+after(async () => {
+  if (dir) await rm(dir, { recursive: true, force: true });
+});
+
 test("readGitLog - reads commits from temp repo", async () => {
-  const dir = await createTempRepo();
-  try {
-    const commits = [];
-    for await (const commit of readGitLog({ repoPath: dir })) {
-      commits.push(commit);
-    }
-
-    // Should have 3 commits (git log outputs newest first)
-    assert.deepEqual(commits.length, 3);
-
-    // Newest commit first: 3:45 AM
-    assert.deepEqual(commits[0].meta.localHour, 3);
-    assert.deepEqual(commits[0].meta.localMinute, 45);
-    assert.deepEqual(commits[0].meta.author, "Test User");
-    assert.ok(commits[0].addedLines.length > 0);
-
-    // Middle commit: 10:00 AM
-    assert.deepEqual(commits[1].meta.localHour, 10);
-
-    // Oldest commit: 2:30 AM
-    assert.deepEqual(commits[2].meta.localHour, 2);
-  } finally {
-    await rm(dir, { recursive: true, force: true });
+  const commits = [];
+  for await (const commit of readGitLog({ repoPath: dir })) {
+    commits.push(commit);
   }
+
+  // Should have 3 commits (git log outputs newest first)
+  assert.deepEqual(commits.length, 3);
+
+  // Newest commit first: 3:45 AM
+  assert.deepEqual(commits[0].meta.localHour, 3);
+  assert.deepEqual(commits[0].meta.localMinute, 45);
+  assert.deepEqual(commits[0].meta.author, "Test User");
+  assert.ok(commits[0].addedLines.length > 0);
+
+  // Middle commit: 10:00 AM
+  assert.deepEqual(commits[1].meta.localHour, 10);
+
+  // Oldest commit: 2:30 AM
+  assert.deepEqual(commits[2].meta.localHour, 2);
 });
 
 test("readGitLog - maxCommits limits output", async () => {
-  const dir = await createTempRepo();
-  try {
-    const commits = [];
-    for await (const commit of readGitLog({ repoPath: dir, maxCommits: 1 })) {
-      commits.push(commit);
-    }
-    assert.deepEqual(commits.length, 1);
-  } finally {
-    await rm(dir, { recursive: true, force: true });
+  const commits = [];
+  for await (const commit of readGitLog({ repoPath: dir, maxCommits: 1 })) {
+    commits.push(commit);
   }
+  assert.deepEqual(commits.length, 1);
 });
 
 test("readGitLog - added lines have correct file paths", async () => {
-  const dir = await createTempRepo();
-  try {
-    const commits = [];
-    for await (const commit of readGitLog({ repoPath: dir })) {
-      commits.push(commit);
-    }
-
-    // Newest commit added util.py
-    const pyLines = commits[0].addedLines.filter((l) => l.filePath === "util.py");
-    assert.ok(pyLines.length > 0);
-    assert.ok(pyLines.some((l) => l.content.includes("why does this work")));
-  } finally {
-    await rm(dir, { recursive: true, force: true });
+  const commits = [];
+  for await (const commit of readGitLog({ repoPath: dir })) {
+    commits.push(commit);
   }
+
+  // Newest commit added util.py
+  const pyLines = commits[0].addedLines.filter((l) => l.filePath === "util.py");
+  assert.ok(pyLines.length > 0);
+  assert.ok(pyLines.some((l) => l.content.includes("why does this work")));
 });
