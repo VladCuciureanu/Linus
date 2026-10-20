@@ -57,7 +57,7 @@ linus --json | jq -r .comment   # requires jq
 
 JSON fields: `hash`, `author`, `authorEmail`, `date` (ISO 8601, UTC), `localTime` (author-local 24-hour `HH:MM`, e.g. `02:47`), `filePath`, `lineNumber`, `comment`, `extension` (lowercased file extension without the dot, e.g. `ts`; empty if the file has none).
 
-Invalid arguments and `git` failures print to stderr and exit with status 1.
+Invalid arguments and `git` failures print a single `linus: <message>` line to stderr and exit with status 1.
 
 Comments are detected heuristically per file type: C-family and JS/TS, Rust, Python, Ruby, shell and config files (YAML, TOML, INI, Dockerfile, Makefile), HTML/XML/Markdown, CSS (`/* */` only) and preprocessors (also `//`), Lua, SQL, Lisp dialects, and LaTeX/Erlang. Lint directives, type-checker pragmas and generated-file banners are ignored.
 

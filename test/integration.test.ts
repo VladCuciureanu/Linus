@@ -198,14 +198,14 @@ for (const [label, args, expected] of [
   ["invalid --after", ["--after", "25:00"], /Invalid time/],
   ["unknown option", ["--frobnicate"], /--frobnicate/],
   ["extra positional", [".", "other"], /Unexpected argument: "other"/],
+  ["not a repository", [join(tmpdir(), "linus-no-such-dir")], /git log failed/],
 ] as const) {
   test(`integration - ${label} exits 1 with a clean error`, async () => {
     const { stdout, stderr, code } = await runLinus([...args]);
     assert.deepEqual(code, 1);
     assert.deepEqual(stdout, "");
-    assert.match(stderr, /^Error: /);
+    assert.match(stderr, /^linus: [^\n]*\n$/, "expected one linus:-prefixed line");
     assert.match(stderr, expected);
-    assert.doesNotMatch(stderr, /\n\s+at /, "no stack trace expected");
   });
 }
 

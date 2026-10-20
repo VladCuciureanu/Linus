@@ -171,14 +171,19 @@ async function* collectComments(opts: CliOptions): AsyncGenerator<LateNightComme
   }
 }
 
+/** Report an error as a single `linus:`-prefixed line on stderr and exit 1. */
+function fail(err: unknown, suffix = ""): void {
+  const message = (err instanceof Error ? err.message : String(err)).replace(/\s*\n\s*/g, " ");
+  console.error(`linus: ${message}${suffix}`);
+  process.exitCode = 1;
+}
+
 async function run() {
   let opts: CliOptions;
   try {
     opts = parseCliArgs(process.argv.slice(2));
   } catch (err: unknown) {
-    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
-    console.error("Run 'linus --help' for usage.");
-    process.exitCode = 1;
+    fail(err, " (see 'linus --help')");
     return;
   }
 
@@ -215,8 +220,7 @@ async function run() {
       for await (const cmt of collectComments(opts)) printComment(cmt);
     }
   } catch (err: unknown) {
-    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
-    process.exitCode = 1;
+    fail(err);
   }
 }
 
