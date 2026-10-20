@@ -55,7 +55,7 @@ linus --author rickson --stats
 linus --json | jq -r .comment   # requires jq
 ```
 
-JSON fields: `hash`, `author`, `authorEmail`, `date` (ISO 8601, UTC), `localTime` (e.g. `2:47 AM`), `filePath`, `lineNumber`, `comment`, `language` (the file extension).
+JSON fields: `hash`, `author`, `authorEmail`, `date` (ISO 8601, UTC), `localTime` (author-local 24-hour `HH:MM`, e.g. `02:47`), `filePath`, `lineNumber`, `comment`, `language` (the file extension).
 
 Invalid arguments and `git` failures print to stderr and exit with status 1.
 

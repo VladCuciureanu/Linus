@@ -12,10 +12,14 @@ function c(code: string, text: string, color: boolean): string {
   return color ? `${code}${text}${RESET}` : text;
 }
 
+function pad2(n: number): string {
+  return n.toString().padStart(2, "0");
+}
+
 function formatTime(hour: number, minute: number): string {
   const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
   const ampm = hour < 12 ? "AM" : "PM";
-  return `${h12}:${minute.toString().padStart(2, "0")} ${ampm}`;
+  return `${h12}:${pad2(minute)} ${ampm}`;
 }
 
 function wordWrap(text: string, width: number): string[] {
@@ -75,7 +79,7 @@ export function formatJson(comment: LateNightComment): string {
     author: comment.author,
     authorEmail: comment.authorEmail,
     date: comment.date.toISOString(),
-    localTime: formatTime(comment.localHour, comment.localMinute),
+    localTime: `${pad2(comment.localHour)}:${pad2(comment.localMinute)}`,
     filePath: comment.filePath,
     lineNumber: comment.lineNumber,
     comment: comment.comment,

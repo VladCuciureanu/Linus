@@ -44,7 +44,18 @@ test("formatJson - produces valid JSON", () => {
   assert.deepEqual(parsed.comment, "i think this works but i don't know why");
   assert.deepEqual(parsed.filePath, "src/db/connection.ts");
   assert.deepEqual(parsed.lineNumber, 42);
-  assert.deepEqual(parsed.localTime, "2:47 AM");
+  assert.deepEqual(parsed.localTime, "02:47");
+});
+
+test("formatJson - localTime is 24-hour HH:MM", () => {
+  assert.equal(
+    JSON.parse(formatJson(makeComment({ localHour: 0, localMinute: 5 }))).localTime,
+    "00:05",
+  );
+  assert.equal(
+    JSON.parse(formatJson(makeComment({ localHour: 14, localMinute: 30 }))).localTime,
+    "14:30",
+  );
 });
 
 test("formatStats - empty list", () => {
