@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { formatPretty, formatJson, formatStats } from "../src/format.ts";
+import { formatPretty, formatJson, formatStats, formatStatsJson } from "../src/format.ts";
 import type { LateNightComment } from "../src/types.ts";
 
 function makeComment(overrides: Partial<LateNightComment> = {}): LateNightComment {
@@ -89,4 +89,32 @@ test("formatPretty - shows the author-local date, not the UTC date", () => {
   );
   assert.ok(output.includes("2023-11-14"), output);
   assert.ok(!output.includes("2023-11-13"), output);
+});
+
+test("formatStatsJson - empty list", () => {
+  assert.deepEqual(JSON.parse(formatStatsJson([])), {
+    total: 0,
+    busiestHour: null,
+    topAuthor: null,
+    topFile: null,
+    hourDistribution: [],
+  });
+});
+
+test("formatStatsJson - computes correct stats", () => {
+  const comments = [
+    makeComment({ author: "Alice", localHour: 2 }),
+    makeComment({ author: "Alice", localHour: 2 }),
+    makeComment({ author: "Bob", localHour: 0, filePath: "other.ts" }),
+  ];
+  assert.deepEqual(JSON.parse(formatStatsJson(comments)), {
+    total: 3,
+    busiestHour: { hour: 2, count: 2 },
+    topAuthor: { name: "Alice", count: 2 },
+    topFile: { path: "src/db/connection.ts", count: 2 },
+    hourDistribution: [
+      { hour: 0, count: 1 },
+      { hour: 2, count: 2 },
+    ],
+  });
 });

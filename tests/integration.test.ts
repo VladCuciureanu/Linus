@@ -176,3 +176,18 @@ test("integration - --min-length accepts a valid number", async () => {
   const lines = stdout.trim().split("\n").filter(Boolean);
   assert.deepEqual(lines.map((l) => JSON.parse(l).comment), ["why does this even work"]);
 });
+
+test("integration - --stats --json emits a JSON stats object", async () => {
+  const { stdout, code } = await runLinus(["--stats", "--json", dir]);
+  assert.deepEqual(code, 0);
+  const lines = stdout.trim().split("\n").filter(Boolean);
+  assert.deepEqual(lines.length, 1);
+  const stats = JSON.parse(lines[0]);
+  assert.deepEqual(stats.total, 3);
+  assert.deepEqual(stats.topAuthor, { name: "Sleepy Dev", count: 2 });
+  assert.deepEqual(stats.hourDistribution, [
+    { hour: 1, count: 1 },
+    { hour: 2, count: 1 },
+    { hour: 3, count: 1 },
+  ]);
+});

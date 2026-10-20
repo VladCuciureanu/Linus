@@ -9,7 +9,7 @@ import {
   filterByAuthor,
   filterComment,
 } from "./filter.ts";
-import { formatPretty, formatJson, formatStats } from "./format.ts";
+import { formatPretty, formatJson, formatStats, formatStatsJson } from "./format.ts";
 
 const VERSION = "0.1.0";
 
@@ -38,7 +38,7 @@ OPTIONS:
   --max-commits <n>       Max number of commits to scan
   --all-branches          Scan all branches, not just current
   --json                  Output as newline-delimited JSON
-  --stats                 Print summary statistics
+  --stats                 Print summary statistics (a JSON object with --json)
   --no-color              Disable colored output
   -h, --help              Show help
   -V, --version           Show version
@@ -124,6 +124,49 @@ function parseCliArgs(args: string[]): CliOptions {
   };
 }
 
+/** Read the git history and yield every late-night comment passing the filters. */
+async function* collectComments(opts: CliOptions): AsyncGenerator<LateNightComment> {
+  for await (const commit of readGitLog({
+    repoPath: opts.repoPath,
+    allBranches: opts.allBranches,
+    maxCommits: opts.maxCommits,
+    since: opts.since,
+    until: opts.until,
+  })) {
+    // Time filter at commit level
+    if (!filterByTime(commit.meta, opts)) continue;
+    if (!filterByAuthor(commit.meta, opts.author)) continue;
+
+    // Group added lines by file
+    const byFile = new Map<string, { lineNumber: number; content: string }[]>();
+    for (const line of commit.addedLines) {
+      const arr = byFile.get(line.filePath) ?? [];
+      arr.push({ lineNumber: line.lineNumber, content: line.content });
+      byFile.set(line.filePath, arr);
+    }
+
+    // Extract comments from each file
+    for (const [filePath, lines] of byFile) {
+      for (const { lineNumber, comment } of extractCommentsFromLines(lines, filePath)) {
+        const lnc: LateNightComment = {
+          hash: commit.meta.hash,
+          author: commit.meta.author,
+          authorEmail: commit.meta.authorEmail,
+          date: commit.meta.date,
+          localDate: commit.meta.localDate,
+          localHour: commit.meta.localHour,
+          localMinute: commit.meta.localMinute,
+          filePath,
+          lineNumber,
+          comment,
+          language: getExtension(filePath),
+        };
+        if (filterComment(lnc, opts)) yield lnc;
+      }
+    }
+  }
+}
+
 async function run() {
   let opts: CliOptions;
   try {
@@ -146,76 +189,29 @@ async function run() {
   }
 
   const useColor = !opts.noColor && process.stdout.isTTY === true;
-  const allComments: LateNightComment[] = [];
+  const printComment = (cmt: LateNightComment) => {
+    if (opts.json) {
+      console.log(formatJson(cmt));
+    } else {
+      console.log(formatPretty(cmt, useColor));
+      console.log();
+    }
+  };
 
   try {
-    for await (const commit of readGitLog({
-      repoPath: opts.repoPath,
-      allBranches: opts.allBranches,
-      maxCommits: opts.maxCommits,
-      since: opts.since,
-      until: opts.until,
-    })) {
-      // Time filter at commit level
-      if (!filterByTime(commit.meta, opts)) continue;
-      if (!filterByAuthor(commit.meta, opts.author)) continue;
-
-      // Group added lines by file
-      const byFile = new Map<string, { lineNumber: number; content: string }[]>();
-      for (const line of commit.addedLines) {
-        const arr = byFile.get(line.filePath) ?? [];
-        arr.push({ lineNumber: line.lineNumber, content: line.content });
-        byFile.set(line.filePath, arr);
-      }
-
-      // Extract comments from each file
-      for (const [filePath, lines] of byFile) {
-        const comments = extractCommentsFromLines(lines, filePath);
-        for (const { lineNumber, comment } of comments) {
-          const lnc: LateNightComment = {
-            hash: commit.meta.hash,
-            author: commit.meta.author,
-            authorEmail: commit.meta.authorEmail,
-            date: commit.meta.date,
-            localDate: commit.meta.localDate,
-            localHour: commit.meta.localHour,
-            localMinute: commit.meta.localMinute,
-            filePath,
-            lineNumber,
-            comment,
-            language: getExtension(filePath),
-          };
-
-          if (!filterComment(lnc, opts)) continue;
-
-          if (opts.stats) {
-            allComments.push(lnc);
-          } else if (opts.json) {
-            console.log(formatJson(lnc));
-          } else {
-            console.log(formatPretty(lnc, useColor));
-            console.log();
-          }
-        }
-      }
-    }
-
     if (opts.stats) {
-      // In stats mode, also print individual comments if not --json
-      if (!opts.json) {
-        for (const cmt of allComments) {
-          console.log(formatPretty(cmt, useColor));
-          console.log();
-        }
+      const allComments: LateNightComment[] = [];
+      for await (const cmt of collectComments(opts)) {
+        allComments.push(cmt);
+        // In stats mode, individual comments are only shown in pretty output
+        if (!opts.json) printComment(cmt);
       }
-      console.log(formatStats(allComments, useColor));
+      console.log(opts.json ? formatStatsJson(allComments) : formatStats(allComments, useColor));
+    } else {
+      for await (const cmt of collectComments(opts)) printComment(cmt);
     }
   } catch (err: unknown) {
-    if (err instanceof Error) {
-      console.error(`Error: ${err.message}`);
-    } else {
-      console.error(`Error: ${err}`);
-    }
+    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
     process.exitCode = 1;
   }
 }

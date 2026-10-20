@@ -88,7 +88,7 @@ OPTIONS:
   --max-commits <n>       Max number of commits to scan
   --all-branches          Scan all branches, not just current
   --json                  Output as newline-delimited JSON
-  --stats                 Print summary statistics
+  --stats                 Print summary statistics (a JSON object with --json)
   --no-color              Disable colored output
   -h, --help              Show help
   -V, --version           Show version
