@@ -38,7 +38,8 @@ export function formatPretty(comment: LateNightComment, useColor: boolean): stri
   const inner = width - 4; // padding inside box
   const time = formatTime(comment.localHour, comment.localMinute);
   const date = comment.localDate;
-  const commentLines = wordWrap(comment.comment, inner);
+  // Leave room for the quotes added around each line.
+  const commentLines = wordWrap(comment.comment, inner - 2);
 
   const top = `┌${"─".repeat(width - 2)}┐`;
   const mid = `├${"─".repeat(width - 2)}┤`;

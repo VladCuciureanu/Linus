@@ -80,6 +80,15 @@ test("formatPretty - colored card lines have equal visible width", () => {
   for (const w of widths) assert.equal(w, widths[0]);
 });
 
+test("formatPretty - full-width quoted comment lines stay inside the box", () => {
+  const output = formatPretty(
+    makeComment({ comment: `${"x".repeat(60)} ${"y".repeat(51)}` }),
+    false,
+  );
+  const widths = output.split("\n").map((l) => [...l].length);
+  for (const w of widths) assert.equal(w, widths[0], output);
+});
+
 test("formatPretty - shows the author-local date, not the UTC date", () => {
   // 2:30 AM on Nov 14 at +05:30 is 21:00 UTC on Nov 13.
   const output = formatPretty(
