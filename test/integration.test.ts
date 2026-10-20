@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, test } from "node:test";
@@ -151,6 +151,21 @@ test("integration - --version", async () => {
   const { stdout, code } = await runLinus(["--version"]);
   assert.deepEqual(code, 0);
   assert.ok(stdout.trim().startsWith("linus v"));
+});
+
+test("integration - --version reads the version from package.json", async () => {
+  const root = await mkdtemp(join(tmpdir(), "linus-version-"));
+  try {
+    await cp(join(import.meta.dirname, "..", "src"), join(root, "src"), { recursive: true });
+    await writeFile(join(root, "package.json"), JSON.stringify({ version: "9.8.7" }));
+    const { stdout } = await execFileAsync(process.execPath, [
+      join(root, "src", "main.ts"),
+      "--version",
+    ]);
+    assert.equal(stdout.trim(), "linus v9.8.7");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 for (const [label, args, expected] of [

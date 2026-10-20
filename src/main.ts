@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { extractCommentsFromLines } from "./comments.ts";
 import { getExtension } from "./diff.ts";
@@ -7,7 +8,10 @@ import { formatJson, formatPretty, formatStats, formatStatsJson } from "./format
 import { readGitLog } from "./git.ts";
 import type { CliOptions, LateNightComment } from "./types.ts";
 
-const VERSION = "0.1.0";
+// package.json sits one level above both src/ and dist/.
+const { version: VERSION } = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+) as { version: string };
 
 const HELP = `
 linus v${VERSION} — the 3am comment finder
