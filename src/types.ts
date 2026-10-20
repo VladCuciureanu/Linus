@@ -39,7 +39,6 @@ export interface CommitMeta {
   hash: string;
   author: string;
   authorEmail: string;
-  dateIso: string;
   localDate: string;
   localHour: number;
   localMinute: number;

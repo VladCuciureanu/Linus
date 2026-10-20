@@ -5,7 +5,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { readGitLog } from "../src/git.ts";
+import { parseAuthorDate, readGitLog } from "../src/git.ts";
 
 const execFileAsync = promisify(execFile);
 
@@ -105,4 +105,25 @@ test("readGitLog - added lines have correct file paths", async () => {
   const pyLines = commits[0].addedLines.filter((l) => l.filePath === "util.py");
   assert.ok(pyLines.length > 0);
   assert.ok(pyLines.some((l) => l.content.includes("why does this work")));
+});
+
+// --- parseAuthorDate ---
+
+test("parseAuthorDate - extracts local hour and minute", () => {
+  const result = parseAuthorDate("2023-11-14T02:47:13+05:30");
+  assert.deepEqual(result.localHour, 2);
+  assert.deepEqual(result.localMinute, 47);
+  assert.deepEqual(result.localDate, "2023-11-14");
+});
+
+test("parseAuthorDate - negative timezone offset", () => {
+  const result = parseAuthorDate("2023-06-01T23:15:00-08:00");
+  assert.deepEqual(result.localHour, 23);
+  assert.deepEqual(result.localMinute, 15);
+});
+
+test("parseAuthorDate - midnight", () => {
+  const result = parseAuthorDate("2023-01-01T00:00:00+00:00");
+  assert.deepEqual(result.localHour, 0);
+  assert.deepEqual(result.localMinute, 0);
 });

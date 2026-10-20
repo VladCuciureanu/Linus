@@ -1,7 +1,6 @@
 import { spawn } from "node:child_process";
 import type { CommitDiff, CommitMeta } from "./types.ts";
 import { parseDiff } from "./diff.ts";
-import { parseAuthorDate } from "./filter.ts";
 
 // Delimiter used to separate commit metadata fields in git log output.
 const FIELD_SEP = "†";
@@ -9,6 +8,28 @@ const FIELD_SEP = "†";
 const RECORD_SEP = "‡COMMIT‡";
 
 const FORMAT = `${RECORD_SEP}%n%h${FIELD_SEP}%an${FIELD_SEP}%ae${FIELD_SEP}%aI`;
+
+/** Parse an ISO 8601 date string with timezone offset and extract local hour/minute. */
+export function parseAuthorDate(isoDate: string): {
+  date: Date;
+  localDate: string;
+  localHour: number;
+  localMinute: number;
+} {
+  // Format: 2023-11-14T02:47:13+05:30 or 2023-11-14T02:47:13-08:00
+  // The time portion IS already in the author's local time.
+  // We just need to extract hour:minute from the string directly.
+  const match = isoDate.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/);
+  if (!match) {
+    throw new Error(`Cannot parse author date: ${isoDate}`);
+  }
+  return {
+    date: new Date(isoDate),
+    localDate: match[1],
+    localHour: parseInt(match[2], 10),
+    localMinute: parseInt(match[3], 10),
+  };
+}
 
 export interface GitLogOptions {
   repoPath: string;
@@ -72,7 +93,7 @@ export async function* readGitLog(
     const [hash, author, authorEmail, dateIso] = parts;
     try {
       const { date, localDate, localHour, localMinute } = parseAuthorDate(dateIso);
-      return { hash, author, authorEmail, dateIso, date, localDate, localHour, localMinute };
+      return { hash, author, authorEmail, date, localDate, localHour, localMinute };
     } catch {
       return null;
     }
