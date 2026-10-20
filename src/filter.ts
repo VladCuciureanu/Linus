@@ -3,20 +3,22 @@ import type { CliOptions, CommitMeta, LateNightComment } from "./types.ts";
 /** Parse an ISO 8601 date string with timezone offset and extract local hour/minute. */
 export function parseAuthorDate(isoDate: string): {
   date: Date;
+  localDate: string;
   localHour: number;
   localMinute: number;
 } {
   // Format: 2023-11-14T02:47:13+05:30 or 2023-11-14T02:47:13-08:00
   // The time portion IS already in the author's local time.
   // We just need to extract hour:minute from the string directly.
-  const timeMatch = isoDate.match(/T(\d{2}):(\d{2})/);
-  if (!timeMatch) {
+  const match = isoDate.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/);
+  if (!match) {
     throw new Error(`Cannot parse author date: ${isoDate}`);
   }
   return {
     date: new Date(isoDate),
-    localHour: parseInt(timeMatch[1], 10),
-    localMinute: parseInt(timeMatch[2], 10),
+    localDate: match[1],
+    localHour: parseInt(match[2], 10),
+    localMinute: parseInt(match[3], 10),
   };
 }
 

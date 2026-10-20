@@ -9,6 +9,7 @@ function makeComment(overrides: Partial<LateNightComment> = {}): LateNightCommen
     author: "Night Owl",
     authorEmail: "owl@example.com",
     date: new Date("2023-11-14T02:47:00Z"),
+    localDate: "2023-11-14",
     localHour: 2,
     localMinute: 47,
     filePath: "src/db/connection.ts",
@@ -73,4 +74,19 @@ test("formatPretty - colored card lines have equal visible width", () => {
   const widths = output.split("\n").map((l) => [...stripAnsi(l)].length);
   assert.ok(widths.length > 5);
   for (const w of widths) assert.equal(w, widths[0]);
+});
+
+test("formatPretty - shows the author-local date, not the UTC date", () => {
+  // 2:30 AM on Nov 14 at +05:30 is 21:00 UTC on Nov 13.
+  const output = formatPretty(
+    makeComment({
+      date: new Date("2023-11-14T02:30:00+05:30"),
+      localDate: "2023-11-14",
+      localHour: 2,
+      localMinute: 30,
+    }),
+    false,
+  );
+  assert.ok(output.includes("2023-11-14"), output);
+  assert.ok(!output.includes("2023-11-13"), output);
 });

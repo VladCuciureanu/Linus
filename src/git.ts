@@ -71,8 +71,8 @@ export async function* readGitLog(
     if (parts.length < 4) return null;
     const [hash, author, authorEmail, dateIso] = parts;
     try {
-      const { date, localHour, localMinute } = parseAuthorDate(dateIso);
-      return { hash, author, authorEmail, dateIso, date, localHour, localMinute };
+      const { date, localDate, localHour, localMinute } = parseAuthorDate(dateIso);
+      return { hash, author, authorEmail, dateIso, date, localDate, localHour, localMinute };
     } catch {
       return null;
     }

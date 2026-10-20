@@ -15,6 +15,7 @@ test("parseAuthorDate - extracts local hour and minute", () => {
   const result = parseAuthorDate("2023-11-14T02:47:13+05:30");
   assert.deepEqual(result.localHour, 2);
   assert.deepEqual(result.localMinute, 47);
+  assert.deepEqual(result.localDate, "2023-11-14");
 });
 
 test("parseAuthorDate - negative timezone offset", () => {
@@ -56,18 +57,18 @@ test("isInTimeWindow - wrapping window 22:00-06:00", () => {
 // --- filterByAuthor ---
 
 test("filterByAuthor - matches name substring", () => {
-  const meta = { hash: "", author: "John Doe", authorEmail: "john@example.com", dateIso: "", localHour: 0, localMinute: 0, date: new Date() };
+  const meta = { hash: "", author: "John Doe", authorEmail: "john@example.com", dateIso: "", localDate: "", localHour: 0, localMinute: 0, date: new Date() };
   assert.deepEqual(filterByAuthor(meta, "john"), true);
   assert.deepEqual(filterByAuthor(meta, "Jane"), false);
 });
 
 test("filterByAuthor - matches email substring", () => {
-  const meta = { hash: "", author: "John", authorEmail: "john@example.com", dateIso: "", localHour: 0, localMinute: 0, date: new Date() };
+  const meta = { hash: "", author: "John", authorEmail: "john@example.com", dateIso: "", localDate: "", localHour: 0, localMinute: 0, date: new Date() };
   assert.deepEqual(filterByAuthor(meta, "example.com"), true);
 });
 
 test("filterByAuthor - no filter passes all", () => {
-  const meta = { hash: "", author: "Anyone", authorEmail: "", dateIso: "", localHour: 0, localMinute: 0, date: new Date() };
+  const meta = { hash: "", author: "Anyone", authorEmail: "", dateIso: "", localDate: "", localHour: 0, localMinute: 0, date: new Date() };
   assert.deepEqual(filterByAuthor(meta, undefined), true);
 });
 

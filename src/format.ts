@@ -18,10 +18,6 @@ function formatTime(hour: number, minute: number): string {
   return `${h12}:${minute.toString().padStart(2, "0")} ${ampm}`;
 }
 
-function formatDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
 function wordWrap(text: string, width: number): string[] {
   if (text.length <= width) return [text];
   const lines: string[] = [];
@@ -44,7 +40,7 @@ export function formatPretty(
   const width = 55;
   const inner = width - 4; // padding inside box
   const time = formatTime(comment.localHour, comment.localMinute);
-  const date = formatDate(comment.date);
+  const date = comment.localDate;
   const commentLines = wordWrap(comment.comment, inner);
 
   const top = `┌${"─".repeat(width - 2)}┐`;

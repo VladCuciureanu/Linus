@@ -182,6 +182,7 @@ async function run() {
             author: commit.meta.author,
             authorEmail: commit.meta.authorEmail,
             date: commit.meta.date,
+            localDate: commit.meta.localDate,
             localHour: commit.meta.localHour,
             localMinute: commit.meta.localMinute,
             filePath,
