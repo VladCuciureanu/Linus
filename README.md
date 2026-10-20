@@ -73,3 +73,7 @@ npm run build          # tsc -> dist/
 npm run dev -- [options] [path]   # node --watch src/main.ts
 npm start -- [options] [path]
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE).
