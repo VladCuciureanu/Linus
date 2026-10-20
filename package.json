@@ -1,7 +1,8 @@
 {
   "name": "linus",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
+  "license": "MIT",
   "description": "The 3AM comment finder: finds code comments written between midnight and 4 AM across a repo's history.",
   "type": "module",
   "bin": {
@@ -28,5 +29,8 @@
     "@biomejs/biome": "2.5.15",
     "@types/node": "^26",
     "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "minimatch": "10.2.6"
   }
 }

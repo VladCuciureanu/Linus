@@ -38,7 +38,7 @@ linus [options] [path]
 | `--before <HH:MM>` | End of the time window, exclusive (default `04:00`). A window may wrap midnight, e.g. `--after 22:00 --before 06:00` |
 | `--author <text>` | Case-insensitive substring match on author name or email |
 | `--since <date>`, `--until <date>` | Passed to `git log` as-is |
-| `--path <glob>` | Keep only files whose repo-relative path matches the glob. `*` and `?` match within one directory level and `**` spans directories (e.g. `src/**/*.ts`). Matching uses Node's `path.matchesGlob`, so files under dot-directories need an explicit `.` in the pattern |
+| `--path <glob>` | Keep only files whose repo-relative path matches the glob. `*` and `?` match within one directory level and `**` spans directories (e.g. `src/**/*.ts`), and `{a,b}` matches either alternative (e.g. `**/*.{ts,tsx}`), and `[ab]` matches one character from a class. Patterns use [minimatch](https://github.com/isaacs/minimatch) syntax. Matching is case-sensitive and the same on every platform: `/` is the only separator, `\` escapes the next character, wildcards also match dot-files, and a leading `!` or `#` is literal |
 | `--grep <regex>` | Keep only comments matching a JavaScript regular expression |
 | `--min-length <n>` | Minimum comment length in characters (default `3`) |
 | `--max-commits <n>` | Scan at most `n` commits |
@@ -73,3 +73,7 @@ npm run build          # tsc -> dist/
 npm run dev -- [options] [path]   # node --watch src/main.ts
 npm start -- [options] [path]
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE).

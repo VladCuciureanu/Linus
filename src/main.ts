@@ -34,7 +34,8 @@ OPTIONS:
   --since <date>          Only commits after this date
   --until <date>          Only commits before this date
   --path <glob>           Only files matching this glob (* and ? stay
-                          within a directory, ** spans directories)
+                          within a directory, ** spans directories;
+                          case-sensitive, \\ escapes)
   --grep <pattern>        Filter comments by regex pattern
   --min-length <n>        Minimum comment length (default: 3)
   --max-commits <n>       Max number of commits to scan

@@ -1,4 +1,4 @@
-import { posix } from "node:path";
+import { Minimatch, type MinimatchOptions } from "minimatch";
 import type { CliOptions, CommitMeta, LateNightComment } from "./types.ts";
 
 /** Check if a given hour:minute falls within the time window [after, before). */
@@ -31,13 +31,35 @@ export function filterByAuthor(meta: CommitMeta, author?: string): boolean {
 }
 
 /**
+ * minimatch options that make `--path` behave the same on every OS: Git paths
+ * always use `/`, so matching is case-sensitive, `/` is the only separator and
+ * `\` escapes the next character, as on Linux. Wildcards also match dot-files,
+ * and a leading `!` or `#` is literal rather than negation or a comment.
+ */
+const GLOB_OPTIONS = {
+  dot: true,
+  nocase: false,
+  platform: "linux",
+  windowsPathsNoEscape: false,
+  nonegate: true,
+  nocomment: true,
+} as const satisfies MinimatchOptions;
+
+let cachedGlob: string | undefined;
+let cachedMatcher: Minimatch | undefined;
+
+/**
  * Check if a repo-relative file path matches a glob: `*` and `?` stay within
- * one path segment, `**` spans directories. Git paths always use `/`, so the
- * POSIX matcher is used on every platform.
+ * one directory, `**` spans directories, and `{a,b}` and `[ab]` work as in
+ * minimatch (see `GLOB_OPTIONS`).
  */
 export function filterByPath(filePath: string, pathGlob?: string): boolean {
   if (!pathGlob) return true;
-  return posix.matchesGlob(filePath, pathGlob);
+  if (pathGlob !== cachedGlob || !cachedMatcher) {
+    cachedGlob = pathGlob;
+    cachedMatcher = new Minimatch(pathGlob, GLOB_OPTIONS);
+  }
+  return cachedMatcher.match(filePath);
 }
 
 /** Apply all comment-level filters. */

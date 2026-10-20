@@ -95,6 +95,87 @@ test("filterByPath - ? matches one character within a segment", () => {
   assert.deepEqual(filterByPath("src/a.ts", "src?a.ts"), false);
 });
 
+test("filterByPath - matching is case-sensitive on every platform", () => {
+  assert.deepEqual(filterByPath("src/A.TS", "**/*.ts"), false);
+  assert.deepEqual(filterByPath("SRC/a.ts", "src/*.ts"), false);
+  assert.deepEqual(filterByPath("src/A.TS", "**/*.TS"), true);
+});
+
+test("filterByPath - backslash is an escape, not a separator", () => {
+  assert.deepEqual(filterByPath("src/a.ts", String.raw`src\*.ts`), false);
+  assert.deepEqual(filterByPath("src/a.ts", String.raw`src/\*.ts`), false);
+  assert.deepEqual(filterByPath("src/*.ts", String.raw`src/\*.ts`), true);
+  assert.deepEqual(filterByPath("src/a?.ts", String.raw`src/a\?.ts`), true);
+  assert.deepEqual(filterByPath("src/ab.ts", String.raw`src/a\?.ts`), false);
+});
+
+test("filterByPath - ** matches zero or more directories, only as a whole segment", () => {
+  assert.deepEqual(filterByPath("src/a.ts", "src/**/a.ts"), true);
+  assert.deepEqual(filterByPath("src/x/y/a.ts", "src/**/a.ts"), true);
+  assert.deepEqual(filterByPath("srcx/a.ts", "src/**/a.ts"), false);
+  assert.deepEqual(filterByPath("src/x/a.ts", "src**.ts"), false);
+  assert.deepEqual(filterByPath("anything/at/all", "**"), true);
+});
+
+test("filterByPath - wildcards match dot-files and dot-directories", () => {
+  assert.deepEqual(filterByPath(".github/ci.ts", "**/*.ts"), true);
+  assert.deepEqual(filterByPath("src/.eslintrc.js", "src/*.js"), true);
+});
+
+test("filterByPath - regex metacharacters are literal", () => {
+  assert.deepEqual(filterByPath("src/a+b(1).ts", "src/a+b(1).ts"), true);
+  assert.deepEqual(filterByPath("src/aXts", "src/a.ts"), false);
+});
+
+test("filterByPath - {a,b} matches either alternative", () => {
+  assert.deepEqual(filterByPath("src/a.ts", "src/{a,b}.ts"), true);
+  assert.deepEqual(filterByPath("src/b.ts", "src/{a,b}.ts"), true);
+  assert.deepEqual(filterByPath("src/c.ts", "src/{a,b}.ts"), false);
+  assert.deepEqual(filterByPath("src/deep/a.tsx", "**/*.{ts,tsx}"), true);
+  assert.deepEqual(filterByPath("a.ts", "**/*.{ts,tsx}"), true);
+  assert.deepEqual(filterByPath("src/a.js", "**/*.{ts,tsx}"), false);
+  assert.deepEqual(filterByPath("lib/x/a.ts", "{src,lib/**}/*.ts"), true);
+  assert.deepEqual(filterByPath("src/x/a.ts", "{src,lib/**}/*.ts"), false);
+});
+
+test("filterByPath - nested braces", () => {
+  assert.deepEqual(filterByPath("src/a.mts", "src/a.{js,{m,c}ts}"), true);
+  assert.deepEqual(filterByPath("src/a.js", "src/a.{js,{m,c}ts}"), true);
+  assert.deepEqual(filterByPath("src/a.ts", "src/a.{js,{m,c}ts}"), false);
+});
+
+test("filterByPath - unbalanced or comma-less braces are literal", () => {
+  assert.deepEqual(filterByPath("src/{a.ts", "src/{a.ts"), true);
+  assert.deepEqual(filterByPath("src/{a,b.ts", "src/{a,b.ts"), true);
+  assert.deepEqual(filterByPath("src/a.ts", "src/{a,b.ts"), false);
+  assert.deepEqual(filterByPath("src/{a}.ts", "src/{a}.ts"), true);
+  assert.deepEqual(filterByPath("src/{a,b}.ts", String.raw`src/\{a,b}.ts`), true);
+});
+
+test("filterByPath - ** at the end of a brace alternative spans zero or more directories", () => {
+  assert.deepEqual(filterByPath("lib/a.ts", "{src,lib/**}/*.ts"), true);
+  assert.deepEqual(filterByPath("src/x", "{src/**,lib}/x"), true);
+  assert.deepEqual(filterByPath("y", "{**,z}/y"), true);
+});
+
+test("filterByPath - [ab] is a character class within one segment", () => {
+  assert.deepEqual(filterByPath("src/a.ts", "src/[ab].ts"), true);
+  assert.deepEqual(filterByPath("src/b.ts", "src/[ab].ts"), true);
+  assert.deepEqual(filterByPath("src/c.ts", "src/[ab].ts"), false);
+  assert.deepEqual(filterByPath("src/x.ts", "src/[a-z].ts"), true);
+  assert.deepEqual(filterByPath("src/a.ts", "src/[!a].ts"), false);
+  assert.deepEqual(filterByPath("src/[ab].ts", String.raw`src/\[ab].ts`), true);
+  assert.deepEqual(filterByPath("src/a.ts", String.raw`src/\[ab].ts`), false);
+});
+
+test("filterByPath - repeated ** segments do not backtrack catastrophically", () => {
+  const deep = `${"d/".repeat(40)}a`;
+  const start = performance.now();
+  assert.deepEqual(filterByPath(deep, "**/**/**/**/**/**/**/**/b"), false);
+  const elapsed = performance.now() - start;
+  assert.ok(elapsed < 100, `took ${elapsed.toFixed(1)} ms`);
+});
+
 test("filterByPath - no glob passes all", () => {
   assert.deepEqual(filterByPath("any/file.ts", undefined), true);
 });

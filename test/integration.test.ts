@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { cp, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, test } from "node:test";
@@ -149,7 +149,8 @@ test("integration - --stats flag", async () => {
 test("integration - --help", async () => {
   const { stdout, code } = await runLinus(["--help"]);
   assert.deepEqual(code, 0);
-  assert.ok(stdout.includes("linus v0.1.0"));
+  const pkg = JSON.parse(await readFile(join(import.meta.dirname, "..", "package.json"), "utf8"));
+  assert.ok(stdout.includes(`linus v${pkg.version}`));
   assert.ok(stdout.includes("USAGE:"));
 });
 
@@ -179,6 +180,12 @@ test("integration - --version reads the version from package.json", async () => 
   try {
     await cp(join(import.meta.dirname, "..", "src"), join(root, "src"), { recursive: true });
     await writeFile(join(root, "package.json"), JSON.stringify({ version: "9.8.7" }));
+    // The copied sources still import runtime dependencies such as minimatch.
+    await symlink(
+      join(import.meta.dirname, "..", "node_modules"),
+      join(root, "node_modules"),
+      "junction",
+    );
     const { stdout } = await execFileAsync(process.execPath, [
       join(root, "src", "main.ts"),
       "--version",
