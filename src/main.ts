@@ -120,8 +120,8 @@ function parseCliArgs(args: string[]): CliOptions {
     allBranches: values["all-branches"] ?? false,
     json: values.json ?? false,
     stats: values.stats ?? false,
-    // Respect NO_COLOR env var
-    noColor: (values["no-color"] ?? false) || process.env.NO_COLOR !== undefined,
+    // Respect NO_COLOR (https://no-color.org): only a non-empty value disables colour.
+    noColor: (values["no-color"] ?? false) || Boolean(process.env.NO_COLOR),
     help: values.help ?? false,
     version: values.version ?? false,
   };

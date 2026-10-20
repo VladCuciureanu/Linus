@@ -45,7 +45,7 @@ linus [options] [path]
 | `--all-branches` | Scan all refs, not just the current branch |
 | `--json` | One JSON object per comment, newline-delimited |
 | `--stats` | Print a summary after the comments; with `--json`, print only the summary as one JSON object |
-| `--no-color` | Disable colour. Colour is also off when stdout is not a TTY or `NO_COLOR` is set |
+| `--no-color` | Disable colour. Colour is also off when stdout is not a TTY or `NO_COLOR` is set to a non-empty value |
 | `-h`, `--help` | Show help |
 | `-V`, `--version` | Show version |
 

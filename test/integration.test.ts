@@ -19,10 +19,16 @@ async function git(dir: string, args: string[], env?: Record<string, string>) {
   }
 }
 
-async function runLinus(args: string[]): Promise<{ stdout: string; stderr: string; code: number }> {
+async function runLinus(
+  args: string[],
+  {
+    env = { NO_COLOR: "1" },
+    nodeArgs = [],
+  }: { env?: Record<string, string>; nodeArgs?: string[] } = {},
+): Promise<{ stdout: string; stderr: string; code: number }> {
   try {
-    const { stdout, stderr } = await execFileAsync(process.execPath, [MAIN, ...args], {
-      env: { ...process.env, NO_COLOR: "1" },
+    const { stdout, stderr } = await execFileAsync(process.execPath, [...nodeArgs, MAIN, ...args], {
+      env: { ...process.env, ...env },
     });
     return { stdout, stderr, code: 0 };
   } catch (err) {
@@ -200,6 +206,20 @@ for (const [label, args, expected] of [
     assert.match(stderr, /^Error: /);
     assert.match(stderr, expected);
     assert.doesNotMatch(stderr, /\n\s+at /, "no stack trace expected");
+  });
+}
+
+// Pretend stdout is a terminal so colour depends only on NO_COLOR / --no-color.
+const FAKE_TTY = ["--import", "data:text/javascript,process.stdout.isTTY=true"];
+
+for (const [label, env, colored] of [
+  ["empty NO_COLOR is ignored", { NO_COLOR: "" }, true],
+  ["non-empty NO_COLOR disables colour", { NO_COLOR: "1" }, false],
+] as const) {
+  test(`integration - ${label}`, async () => {
+    const { stdout, code } = await runLinus([dir], { env, nodeArgs: FAKE_TTY });
+    assert.equal(code, 0);
+    assert.equal(stdout.includes("\x1b["), colored);
   });
 }
 
