@@ -1,120 +1,71 @@
 # Linus
 
-**The 3AM comment finder** — finds every code comment written between midnight and 4 AM across your repo's history. Collects them. They are always unhinged and often prophetic.
+The 3 AM comment finder: walks a repository's history and collects every code comment added between midnight and 4 AM, in the author's local time. They are always unhinged and often prophetic.
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│ 2:47 AM · 2023-11-14 · @rickson                    │
+│ 2:47 AM · 2023-11-14 · @rickson                     │
 │ abc1234 · src/db/connection.ts                      │
 ├─────────────────────────────────────────────────────┤
-│ "i think this works but i don't know why and at     │
-│  this point i'm too afraid to find out"             │
+│ "this works and i am too afraid to ask why"         │
 └─────────────────────────────────────────────────────┘
 ```
 
+## Requirements
+
+Node.js 26 or newer, and `git` on `PATH`.
+
 ## Install
 
-**Requirements:** [Node.js](https://nodejs.org/) 24 or newer and `git`.
-
-### Run from source
-
 ```sh
-npm install
-node src/main.ts [OPTIONS] [path]
-```
-
-### Install globally
-
-```sh
-npm install
+npm install        # also builds dist/ via the prepare script
 npm install -g .   # or: npm link
-linus [OPTIONS] [path]
 ```
 
-`npm install` builds the `linus` executable into `dist/` (via the `prepare` script); run `npm run build` to rebuild it manually.
+Or run from source without installing: `node src/main.ts [options] [path]`.
 
 ## Usage
 
+```
+linus [options] [path]
+```
+
+`path` is the repository to scan (default: current directory). Merge commits are skipped; only lines added in each commit are inspected.
+
+| Option | Description |
+| --- | --- |
+| `--after <HH:MM>` | Start of the time window, inclusive (default `00:00`) |
+| `--before <HH:MM>` | End of the time window, exclusive (default `04:00`). A window may wrap midnight, e.g. `--after 22:00 --before 06:00` |
+| `--author <text>` | Case-insensitive substring match on author name or email |
+| `--since <date>`, `--until <date>` | Passed to `git log` as-is |
+| `--path <glob>` | Match the file path against a glob; `*` matches any characters, including `/` |
+| `--grep <regex>` | Keep only comments matching a JavaScript regular expression |
+| `--min-length <n>` | Minimum comment length in characters (default `3`) |
+| `--max-commits <n>` | Scan at most `n` commits |
+| `--all-branches` | Scan all refs, not just the current branch |
+| `--json` | One JSON object per comment, newline-delimited |
+| `--stats` | Print a summary after the comments; with `--json`, print only the summary as one JSON object |
+| `--no-color` | Disable colour. Colour is also off when stdout is not a TTY or `NO_COLOR` is set |
+| `-h`, `--help` | Show help |
+| `-V`, `--version` | Show version |
+
 ```sh
-# Scan current repo for 3am comments
-linus
-
-# Scan a specific repo
-linus /path/to/repo
-
-# Output as JSON (great for piping)
-linus --json
-
-# Show stats (busiest hour, top night owl, etc.)
-linus --stats
-
-# Custom time window (e.g. 10pm–6am)
-linus --after 22:00 --before 06:00
-
-# Filter by author
-linus --author "rickson"
-
-# Search comments by pattern
-linus --grep "why"
-
-# Only TypeScript files
-linus --path "*.ts"
-
-# Limit scan depth
-linus --max-commits 1000
-
-# Scan all branches
-linus --all-branches
+linus ~/src/legacy-billing --grep "why|sorry" --path "*.ts"
+linus --author rickson --stats
+linus --json | jq -r .comment   # requires jq
 ```
 
-## CLI Reference
+JSON fields: `hash`, `author`, `authorEmail`, `date` (ISO 8601, UTC), `localTime` (e.g. `2:47 AM`), `filePath`, `lineNumber`, `comment`, `language` (the file extension).
 
-```
-USAGE:
-  linus [OPTIONS] [path]
+Invalid arguments and `git` failures print to stderr and exit with status 1.
 
-ARGUMENTS:
-  [path]    Path to git repository (default: current directory)
-
-OPTIONS:
-  --after <HH:MM>        Start of time window (default: 00:00)
-  --before <HH:MM>       End of time window (default: 04:00)
-  --author <name>         Filter by author name/email (substring match)
-  --since <date>          Only commits after this date
-  --until <date>          Only commits before this date
-  --path <glob>           Only files matching this glob
-  --grep <pattern>        Filter comments by regex pattern
-  --min-length <n>        Minimum comment length (default: 3)
-  --max-commits <n>       Max number of commits to scan
-  --all-branches          Scan all branches, not just current
-  --json                  Output as newline-delimited JSON
-  --stats                 Print summary statistics (a JSON object with --json)
-  --no-color              Disable colored output
-  -h, --help              Show help
-  -V, --version           Show version
-```
-
-## How it works
-
-1. Runs `git log -p` to stream the full commit history with patches
-2. Parses unified diffs to extract only **added lines** per commit
-3. Detects code comments using language-aware heuristics (supports 30+ languages)
-4. Filters by the **author's local time** — so "3 AM" means 3 AM wherever they were, not where you are
-5. Presents the results in a pretty terminal format (or JSON for scripting)
-
-## Supported languages
-
-TypeScript, JavaScript, Python, Go, Rust, Ruby, C, C++, Java, Kotlin, Swift, Scala, Dart, Zig, Shell, Lua, SQL, Lisp/Clojure, LaTeX/Erlang, HTML/XML, CSS/SCSS, YAML, TOML, and more.
+Comments are detected heuristically per file type: C-family and JS/TS, Rust, Python, Ruby, shell and config files (YAML, TOML, INI, Dockerfile, Makefile), HTML/XML/Markdown, CSS and preprocessors, Lua, SQL, Lisp dialects, and LaTeX/Erlang. Lint directives, type-checker pragmas and generated-file banners are ignored.
 
 ## Development
 
 ```sh
-# Run tests
-npm test
-
-# Type-check
-npm run typecheck
-
-# Run from source
-npm start -- [OPTIONS] [path]
+npm test            # node --test
+npm run typecheck   # tsc
+npm run build       # tsc -> dist/
+npm start -- [options] [path]
 ```
