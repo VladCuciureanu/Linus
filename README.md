@@ -64,8 +64,12 @@ Comments are detected heuristically per file type: C-family and JS/TS, Rust, Pyt
 ## Development
 
 ```sh
-npm test            # node --test
-npm run typecheck   # tsc
-npm run build       # tsc -> dist/
+npm test               # node --test (tests live in test/*.test.ts)
+npm run check          # biome check, typecheck and tests
+npm run format         # biome check --write
+npm run lint           # biome lint
+npm run typecheck      # tsc
+npm run build          # tsc -> dist/
+npm run dev -- [options] [path]   # node --watch src/main.ts
 npm start -- [options] [path]
 ```
