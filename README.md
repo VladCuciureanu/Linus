@@ -52,10 +52,10 @@ linus [options] [path]
 ```sh
 linus ~/src/legacy-billing --grep "why|sorry" --path "*.ts"
 linus --author rickson --stats
-linus --json | jq -r .comment
+linus --json | jq -r .comment   # requires jq
 ```
 
-JSON fields: `hash`, `author`, `authorEmail`, `date` (ISO 8601, UTC), `localTime`, `filePath`, `lineNumber`, `comment`, `language` (the file extension).
+JSON fields: `hash`, `author`, `authorEmail`, `date` (ISO 8601, UTC), `localTime` (e.g. `2:47 AM`), `filePath`, `lineNumber`, `comment`, `language` (the file extension).
 
 Invalid arguments and `git` failures print to stderr and exit with status 1.
 
