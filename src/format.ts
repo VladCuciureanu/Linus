@@ -1,3 +1,5 @@
+import stringWidth from "string-width";
+import stripAnsi from "strip-ansi";
 import type { LateNightComment } from "./types.ts";
 
 const RESET = "\x1b[0m";
@@ -23,25 +25,77 @@ function formatTime(hour: number, minute: number): string {
   return `${h12}:${pad2(minute)} ${ampm}`;
 }
 
+const graphemeSegmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+
+function graphemes(text: string): string[] {
+  return Array.from(graphemeSegmenter.segment(text), (s) => s.segment);
+}
+
+/**
+ * Make repo-supplied text safe to draw in the card: strip ANSI escape
+ * sequences, turn tabs into spaces and drop any other control characters,
+ * so data can neither break the box nor send codes to the terminal. Bidi
+ * controls are dropped too, so data can't visually reorder the text
+ * ("Trojan Source").
+ */
+function sanitize(text: string): string {
+  return (
+    stripAnsi(text)
+      .replace(/\t/g, "    ")
+      // biome-ignore lint/suspicious/noControlCharactersInRegex: removes control characters
+      .replace(/[\u0000-\u001f\u007f-\u009f]/g, "")
+      .replace(/[‎‏‪-‮⁦-⁩]/g, "")
+  );
+}
+
+/** Sanitise a single-line field (author, path) and trim trailing whitespace. */
+function sanitizeField(text: string): string {
+  return sanitize(text).trimEnd();
+}
+
+/** Wrap `text` into lines of at most `width` terminal columns. */
 function wordWrap(text: string, width: number): string[] {
-  if (text.length <= width) return [text];
   const lines: string[] = [];
-  let remaining = text;
-  while (remaining.length > width) {
-    let breakAt = remaining.lastIndexOf(" ", width);
-    if (breakAt <= 0) breakAt = width;
-    lines.push(remaining.slice(0, breakAt));
-    remaining = remaining.slice(breakAt).trimStart();
+  let remaining = graphemes(text);
+  while (stringWidth(remaining.join("")) > width) {
+    // Longest prefix (in whole graphemes) that fits in `width` columns.
+    let fit = 0;
+    let used = 0;
+    while (fit < remaining.length) {
+      const w = stringWidth(remaining[fit]);
+      if (used + w > width) break;
+      used += w;
+      fit++;
+    }
+    fit = Math.max(1, fit);
+    // Prefer breaking at the last space inside the fitting prefix.
+    let breakAt = remaining.lastIndexOf(" ", fit);
+    if (breakAt <= 0) breakAt = fit;
+    lines.push(remaining.slice(0, breakAt).join(""));
+    remaining = remaining.slice(breakAt);
+    while (remaining[0] === " ") remaining.shift();
   }
-  if (remaining) lines.push(remaining);
+  if (remaining.length > 0 || lines.length === 0) lines.push(remaining.join(""));
   return lines;
 }
 
-/** Cut `text` to at most `max` code points, ending in "…" when shortened. */
+/** Cut `text` to at most `max` terminal columns, ending in "…" when shortened. */
 function truncate(text: string, max: number): string {
-  const chars = [...text];
-  if (chars.length <= max) return text;
-  return `${chars.slice(0, Math.max(0, max - 1)).join("")}…`;
+  if (stringWidth(text) <= max) return text;
+  let out = "";
+  let used = 0;
+  for (const g of graphemes(text)) {
+    const w = stringWidth(g);
+    if (used + w > max - 1) break;
+    out += g;
+    used += w;
+  }
+  return `${out}…`;
+}
+
+/** Pad `s` with spaces to `w` terminal columns (ANSI styling is not counted). */
+function pad(s: string, w: number): string {
+  return s + " ".repeat(Math.max(0, w - stringWidth(s)));
 }
 
 /** Pretty-print a single comment as a box card. */
@@ -51,24 +105,24 @@ export function formatPretty(comment: LateNightComment, useColor: boolean): stri
   const time = formatTime(comment.localHour, comment.localMinute);
   const date = comment.localDate;
   // Leave room for the quotes added around each line.
-  const commentLines = wordWrap(comment.comment, inner - 2);
+  const commentLines = wordWrap(sanitize(comment.comment), inner - 2);
 
   const top = `┌${"─".repeat(width - 2)}┐`;
   const mid = `├${"─".repeat(width - 2)}┤`;
   const bot = `└${"─".repeat(width - 2)}┘`;
 
-  // biome-ignore lint/suspicious/noControlCharactersInRegex: matches ANSI escape sequences
-  const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
-  const pad = (s: string, w: number) => s + " ".repeat(Math.max(0, w - stripAnsi(s).length));
-
   // Header fields are cut with an ellipsis so each line fits inside the box.
   const h1Prefix = `${time} · ${date} · @`;
-  const author = truncate(comment.author, inner - h1Prefix.length);
+  const author = truncate(sanitizeField(comment.author), inner - stringWidth(h1Prefix));
   const h1 =
     paint(BOLD + CYAN, time, useColor) +
     paint(DIM, ` · ${date} · `, useColor) +
     paint(YELLOW, `@${author}`, useColor);
-  const h2 = paint(DIM, truncate(`${comment.hash} · ${comment.filePath}`, inner), useColor);
+  const h2 = paint(
+    DIM,
+    truncate(`${comment.hash} · ${sanitizeField(comment.filePath)}`, inner),
+    useColor,
+  );
 
   const lines = [top];
   lines.push(`│ ${pad(h1, inner)} │`);
@@ -156,8 +210,8 @@ export function formatStats(comments: LateNightComment[], useColor: boolean): st
     paint(BOLD + MAGENTA, "── Stats ──", useColor),
     `Total late-night comments: ${paint(BOLD, String(stats.total), useColor)}`,
     `Busiest hour: ${paint(BOLD, `${busiestHour.hour}:00`, useColor)} (${busiestHour.count} comments)`,
-    `Most prolific night owl: ${paint(BOLD, topAuthor.name, useColor)} (${topAuthor.count} comments)`,
-    `Most commented file: ${paint(BOLD, topFile.path, useColor)} (${topFile.count} comments)`,
+    `Most prolific night owl: ${paint(BOLD, sanitizeField(topAuthor.name), useColor)} (${topAuthor.count} comments)`,
+    `Most commented file: ${paint(BOLD, sanitizeField(topFile.path), useColor)} (${topFile.count} comments)`,
   ];
 
   // Hour histogram
