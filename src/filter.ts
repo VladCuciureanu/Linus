@@ -29,15 +29,11 @@ export function filterByTime(
 }
 
 /** Check if a commit passes the author filter. */
-export function filterByAuthor(
-  meta: CommitMeta,
-  author?: string,
-): boolean {
+export function filterByAuthor(meta: CommitMeta, author?: string): boolean {
   if (!author) return true;
   const lower = author.toLowerCase();
   return (
-    meta.author.toLowerCase().includes(lower) ||
-    meta.authorEmail.toLowerCase().includes(lower)
+    meta.author.toLowerCase().includes(lower) || meta.authorEmail.toLowerCase().includes(lower)
   );
 }
 
@@ -46,7 +42,7 @@ export function filterByPath(filePath: string, pathGlob?: string): boolean {
   if (!pathGlob) return true;
   // Simple glob: support * as wildcard
   const regex = new RegExp(
-    "^" + pathGlob.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*") + "$",
+    `^${pathGlob.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")}$`,
   );
   return regex.test(filePath);
 }

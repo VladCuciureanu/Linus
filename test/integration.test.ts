@@ -1,9 +1,9 @@
-import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { after, before, test } from "node:test";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
@@ -43,15 +43,18 @@ async function createTestRepo(): Promise<string> {
   await git(dir, ["config", "user.email", "sleepy@dev.io"]);
 
   // Commit 1: 2:30 AM — should be found
-  await writeFile(join(dir, "app.ts"), '// the void stares back\nconst x = 1;\n');
-  await git(dir, ["add", "."], );
+  await writeFile(join(dir, "app.ts"), "// the void stares back\nconst x = 1;\n");
+  await git(dir, ["add", "."]);
   await git(dir, ["commit", "-m", "commit1"], {
     GIT_AUTHOR_DATE: "2023-06-01T02:30:00+00:00",
     GIT_COMMITTER_DATE: "2023-06-01T02:30:00+00:00",
   });
 
   // Commit 2: 14:00 — should NOT be found
-  await writeFile(join(dir, "app.ts"), '// the void stares back\nconst x = 1;\n// normal comment\nconst y = 2;\n');
+  await writeFile(
+    join(dir, "app.ts"),
+    "// the void stares back\nconst x = 1;\n// normal comment\nconst y = 2;\n",
+  );
   await git(dir, ["add", "."]);
   await git(dir, ["commit", "-m", "commit2"], {
     GIT_AUTHOR_DATE: "2023-06-02T14:00:00+00:00",
@@ -59,7 +62,7 @@ async function createTestRepo(): Promise<string> {
   });
 
   // Commit 3: 3:15 AM — should be found
-  await writeFile(join(dir, "util.py"), '# sleep is for the weak\ndef run(): pass\n');
+  await writeFile(join(dir, "util.py"), "# sleep is for the weak\ndef run(): pass\n");
   await git(dir, ["add", "."]);
   await git(dir, ["commit", "-m", "commit3"], {
     GIT_AUTHOR_DATE: "2023-06-03T03:15:00-05:00",
@@ -174,7 +177,10 @@ test("integration - --min-length accepts a valid number", async () => {
   const { stdout, code } = await runLinus(["--json", "--min-length", "22", dir]);
   assert.deepEqual(code, 0);
   const lines = stdout.trim().split("\n").filter(Boolean);
-  assert.deepEqual(lines.map((l) => JSON.parse(l).comment), ["why does this even work"]);
+  assert.deepEqual(
+    lines.map((l) => JSON.parse(l).comment),
+    ["why does this even work"],
+  );
 });
 
 test("integration - --stats --json emits a JSON stats object", async () => {

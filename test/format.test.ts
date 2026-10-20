@@ -1,6 +1,6 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
-import { formatPretty, formatJson, formatStats, formatStatsJson } from "../src/format.ts";
+import { test } from "node:test";
+import { formatJson, formatPretty, formatStats, formatStatsJson } from "../src/format.ts";
 import type { LateNightComment } from "../src/types.ts";
 
 function makeComment(overrides: Partial<LateNightComment> = {}): LateNightComment {
@@ -65,9 +65,13 @@ test("formatStats - computes correct stats", () => {
 });
 
 test("formatPretty - colored card lines have equal visible width", () => {
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: matches ANSI escape sequences
   const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
   const output = formatPretty(
-    makeComment({ comment: "a long late-night comment that should wrap across more than one line of the card body" }),
+    makeComment({
+      comment:
+        "a long late-night comment that should wrap across more than one line of the card body",
+    }),
     true,
   );
   assert.ok(output.includes("\x1b["), "expected ANSI codes in colored output");

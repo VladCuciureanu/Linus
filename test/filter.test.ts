@@ -1,11 +1,11 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import {
-  isInTimeWindow,
   filterByAuthor,
-  filterByPath,
   filterByGrep,
   filterByLength,
+  filterByPath,
+  isInTimeWindow,
 } from "../src/filter.ts";
 
 // --- isInTimeWindow ---
@@ -35,18 +35,42 @@ test("isInTimeWindow - wrapping window 22:00-06:00", () => {
 // --- filterByAuthor ---
 
 test("filterByAuthor - matches name substring", () => {
-  const meta = { hash: "", author: "John Doe", authorEmail: "john@example.com", localDate: "", localHour: 0, localMinute: 0, date: new Date() };
+  const meta = {
+    hash: "",
+    author: "John Doe",
+    authorEmail: "john@example.com",
+    localDate: "",
+    localHour: 0,
+    localMinute: 0,
+    date: new Date(),
+  };
   assert.deepEqual(filterByAuthor(meta, "john"), true);
   assert.deepEqual(filterByAuthor(meta, "Jane"), false);
 });
 
 test("filterByAuthor - matches email substring", () => {
-  const meta = { hash: "", author: "John", authorEmail: "john@example.com", localDate: "", localHour: 0, localMinute: 0, date: new Date() };
+  const meta = {
+    hash: "",
+    author: "John",
+    authorEmail: "john@example.com",
+    localDate: "",
+    localHour: 0,
+    localMinute: 0,
+    date: new Date(),
+  };
   assert.deepEqual(filterByAuthor(meta, "example.com"), true);
 });
 
 test("filterByAuthor - no filter passes all", () => {
-  const meta = { hash: "", author: "Anyone", authorEmail: "", localDate: "", localHour: 0, localMinute: 0, date: new Date() };
+  const meta = {
+    hash: "",
+    author: "Anyone",
+    authorEmail: "",
+    localDate: "",
+    localHour: 0,
+    localMinute: 0,
+    date: new Date(),
+  };
   assert.deepEqual(filterByAuthor(meta, undefined), true);
 });
 

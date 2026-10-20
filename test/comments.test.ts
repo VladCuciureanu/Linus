@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import { extractComment, extractCommentsFromLines } from "../src/comments.ts";
 
 // --- Single-line comments ---
@@ -53,7 +53,7 @@ test("extractComment - C-style single-line block", () => {
 
 test("extractComment - C-style multi-line block", () => {
   let block = { active: false, endMarker: "" };
-  let result;
+  let result: ReturnType<typeof extractComment>;
 
   result = extractComment("/* start of block", "foo.ts", block);
   assert.deepEqual(result.comment, "start of block");
@@ -121,6 +121,7 @@ test("extractCommentsFromLines - handles multi-line blocks", () => {
 test("extractComment - ignores // inside string literals", () => {
   assert.deepEqual(extractComment(`const url = "http://x";`, "foo.ts").comment, null);
   assert.deepEqual(extractComment(`const url = 'https://example.com/a';`, "foo.ts").comment, null);
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: the input is TS source containing a template literal
   assert.deepEqual(extractComment("const url = `http://${host}/`;", "foo.ts").comment, null);
 });
 
@@ -154,8 +155,14 @@ test("extractComment - LaTeX apostrophe before % does not hide the comment", () 
 });
 
 test("extractComment - Markdown/HTML apostrophe before <!-- does not hide the comment", () => {
-  assert.deepEqual(extractComment("It's late <!-- we'll fix this -->", "README.md").comment, "we'll fix this");
-  assert.deepEqual(extractComment("It's late <!-- we'll fix this -->", "index.html").comment, "we'll fix this");
+  assert.deepEqual(
+    extractComment("It's late <!-- we'll fix this -->", "README.md").comment,
+    "we'll fix this",
+  );
+  assert.deepEqual(
+    extractComment("It's late <!-- we'll fix this -->", "index.html").comment,
+    "we'll fix this",
+  );
 });
 
 test("extractComment - Elisp quote before ; does not hide the comment", () => {
