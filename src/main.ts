@@ -90,7 +90,10 @@ function parseRegExp(pattern: string): RegExp {
   }
 }
 
-function parseCliArgs(args: string[]): CliOptions {
+/** What the command line asks for: help, the version, or a scan with options. */
+type Command = { action: "help" } | { action: "version" } | { action: "scan"; opts: CliOptions };
+
+function parseCliArgs(args: string[]): Command {
   const { values, positionals } = parseArgs({
     args,
     options: OPTIONS,
@@ -107,7 +110,8 @@ function parseCliArgs(args: string[]): CliOptions {
   const minLength = values["min-length"];
   const maxCommits = values["max-commits"];
 
-  return {
+  // Every option is validated before --help or --version take effect.
+  const opts: CliOptions = {
     repoPath: positionals[0] ?? ".",
     after: values.after !== undefined ? parseHHMM(values.after) : { hour: 0, minute: 0 },
     before: values.before !== undefined ? parseHHMM(values.before) : { hour: 4, minute: 0 },
@@ -123,9 +127,11 @@ function parseCliArgs(args: string[]): CliOptions {
     stats: values.stats ?? false,
     // Respect NO_COLOR (https://no-color.org): only a non-empty value disables colour.
     noColor: (values["no-color"] ?? false) || Boolean(process.env.NO_COLOR),
-    help: values.help ?? false,
-    version: values.version ?? false,
   };
+
+  if (values.help) return { action: "help" };
+  if (values.version) return { action: "version" };
+  return { action: "scan", opts };
 }
 
 /** Read the git history and yield every late-night comment passing the filters. */
@@ -179,23 +185,25 @@ function fail(err: unknown, suffix = ""): void {
 }
 
 async function run() {
-  let opts: CliOptions;
+  let command: Command;
   try {
-    opts = parseCliArgs(process.argv.slice(2));
+    command = parseCliArgs(process.argv.slice(2));
   } catch (err: unknown) {
     fail(err, " (see 'linus --help')");
     return;
   }
 
-  if (opts.help) {
+  if (command.action === "help") {
     console.log(HELP);
     return;
   }
 
-  if (opts.version) {
+  if (command.action === "version") {
     console.log(`linus v${VERSION}`);
     return;
   }
+
+  const { opts } = command;
 
   const useColor = !opts.noColor && process.stdout.isTTY === true;
   const printComment = (cmt: LateNightComment) => {

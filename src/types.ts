@@ -31,8 +31,6 @@ export interface CliOptions {
   json: boolean;
   stats: boolean;
   noColor: boolean;
-  help: boolean;
-  version: boolean;
 }
 
 /** Metadata parsed from a commit header in git log output. */
