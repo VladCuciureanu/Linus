@@ -43,8 +43,21 @@ register(["html", "htm", "xml", "svg", "vue", "svelte", "md"], STYLES.html);
 register(["lua"], STYLES.lua);
 register(["sql", "psql", "plsql"], STYLES.sql);
 register(["el", "lisp", "cl", "clj", "cljs", "scm", "rkt"], STYLES.lisp);
-register(["tex", "sty", "cls", "bib", "erl", "hrl", "matlab", "m"], STYLES.latex);
+register(["tex", "sty", "cls", "bib", "erl", "hrl", "matlab"], STYLES.latex);
 register(["css", "scss", "sass", "less"], STYLES.clike);
+
+/** Files identified by their (lowercased) basename rather than extension. */
+const BASENAME_TO_STYLE: Record<string, CommentStyle> = {
+  dockerfile: STYLES.hash,
+  containerfile: STYLES.hash,
+  makefile: STYLES.hash,
+  gnumakefile: STYLES.hash,
+};
+
+function styleFor(filePath: string): CommentStyle | undefined {
+  const basename = filePath.slice(filePath.lastIndexOf("/") + 1).toLowerCase();
+  return BASENAME_TO_STYLE[basename] ?? EXT_TO_STYLE[getExtension(filePath)];
+}
 
 /** Patterns for trivial/generated comments to ignore. */
 const TRIVIAL_PATTERNS = [
@@ -83,8 +96,7 @@ export function extractComment(
   filePath: string,
   block: BlockState = { active: false, endMarker: "" },
 ): { comment: string | null; block: BlockState } {
-  const ext = getExtension(filePath);
-  const style = EXT_TO_STYLE[ext];
+  const style = styleFor(filePath);
 
   if (!style) {
     return { comment: null, block };

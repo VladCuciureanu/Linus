@@ -155,3 +155,15 @@ test("extractCommentsFromLines - block state does not carry across hunk gaps", (
   const result = extractCommentsFromLines(lines, "foo.ts");
   assert.deepEqual(result, [{ lineNumber: 10, comment: "opened in one hunk" }]);
 });
+
+test("extractComment - Objective-C .m uses C-style comments", () => {
+  assert.deepEqual(extractComment("// objc note", "Foo.m").comment, "objc note");
+  assert.deepEqual(extractComment(`NSLog(@"%d", n);`, "Foo.m").comment, null);
+});
+
+test("extractComment - Dockerfile and Makefile matched by basename", () => {
+  assert.deepEqual(extractComment("# install deps", "Dockerfile").comment, "install deps");
+  assert.deepEqual(extractComment("# build all", "Makefile").comment, "build all");
+  assert.deepEqual(extractComment("# nested", "docker/app/Dockerfile").comment, "nested");
+  assert.deepEqual(extractComment("# gnu", "GNUmakefile").comment, "gnu");
+});
