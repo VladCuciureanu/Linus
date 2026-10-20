@@ -53,7 +53,7 @@ test("extractComment - C-style single-line block", () => {
 
 test("extractComment - C-style multi-line block", () => {
   let block = { active: false, endMarker: "" };
-  let result;
+  let result: ReturnType<typeof extractComment>;
 
   result = extractComment("/* start of block", "foo.ts", block);
   assert.deepEqual(result.comment, "start of block");
@@ -121,6 +121,7 @@ test("extractCommentsFromLines - handles multi-line blocks", () => {
 test("extractComment - ignores // inside string literals", () => {
   assert.deepEqual(extractComment(`const url = "http://x";`, "foo.ts").comment, null);
   assert.deepEqual(extractComment(`const url = 'https://example.com/a';`, "foo.ts").comment, null);
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: the input is TS source containing a template literal
   assert.deepEqual(extractComment("const url = `http://${host}/`;", "foo.ts").comment, null);
 });
 

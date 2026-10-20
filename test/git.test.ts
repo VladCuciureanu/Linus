@@ -162,7 +162,7 @@ test("readGitLog - stopping early does not throw", async (t) => {
   // A diff far larger than the pipe buffers, so git is still writing when
   // the consumer stops reading.
   const big = Array.from({ length: 40_000 }, (_, i) => `// line ${i} ${"x".repeat(60)}`).join("\n");
-  await writeFile(join(repo, "big.ts"), big + "\n");
+  await writeFile(join(repo, "big.ts"), `${big}\n`);
   await commitAll(repo, "big", "2023-11-14T02:00:00+00:00");
   await writeFile(join(repo, "small.ts"), "// small\n");
   await commitAll(repo, "small", "2023-11-15T02:00:00+00:00");
@@ -181,10 +181,10 @@ test("readGitLog - stopping early does not throw", async (t) => {
 test("readGitLog - includes lines added to renamed files", async (t) => {
   const repo = await emptyRepo(t);
   const body = Array.from({ length: 10 }, (_, i) => `const v${i} = ${i};`).join("\n");
-  await writeFile(join(repo, "old.ts"), body + "\n");
+  await writeFile(join(repo, "old.ts"), `${body}\n`);
   await commitAll(repo, "add", "2023-11-14T02:00:00+00:00");
   await git(repo, ["mv", "old.ts", "new.ts"]);
-  await writeFile(join(repo, "new.ts"), body + "\n// added while renaming\n");
+  await writeFile(join(repo, "new.ts"), `${body}\n// added while renaming\n`);
   await commitAll(repo, "rename", "2023-11-15T02:00:00+00:00");
 
   const commits = [];

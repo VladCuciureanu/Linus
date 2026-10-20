@@ -45,6 +45,7 @@ export function formatPretty(comment: LateNightComment, useColor: boolean): stri
   const bot = `└${"─".repeat(width - 2)}┘`;
 
   const pad = (s: string, w: number) => s + " ".repeat(Math.max(0, w - stripAnsi(s).length));
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: matches ANSI escape sequences
   const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
 
   const h1 =

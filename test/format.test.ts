@@ -65,6 +65,7 @@ test("formatStats - computes correct stats", () => {
 });
 
 test("formatPretty - colored card lines have equal visible width", () => {
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: matches ANSI escape sequences
   const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
   const output = formatPretty(
     makeComment({

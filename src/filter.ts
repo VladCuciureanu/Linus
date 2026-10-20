@@ -42,7 +42,7 @@ export function filterByPath(filePath: string, pathGlob?: string): boolean {
   if (!pathGlob) return true;
   // Simple glob: support * as wildcard
   const regex = new RegExp(
-    "^" + pathGlob.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*") + "$",
+    `^${pathGlob.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")}$`,
   );
   return regex.test(filePath);
 }
