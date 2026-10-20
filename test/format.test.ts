@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import stringWidth from "string-width";
 import { formatJson, formatPretty, formatStats, formatStatsJson } from "../src/format.ts";
 import type { LateNightComment } from "../src/types.ts";
 
@@ -169,4 +170,52 @@ test("formatStatsJson - computes correct stats", () => {
       { hour: 2, count: 2 },
     ],
   });
+});
+
+test("formatPretty - every card line has the same display width for wide, zero-width and control data", () => {
+  const family = "\u{1F468}\u200D\u{1F469}\u200D\u{1F467}\u200D\u{1F466}";
+  const cases: [string, Partial<LateNightComment>][] = [
+    ["20 emoji author", { author: "\u{1F600}".repeat(20) }],
+    ["20 CJK author", { author: "漢".repeat(20) }],
+    ["combining marks", { author: "e\u0301".repeat(40), comment: "cafe\u0301 ".repeat(30) }],
+    ["ZWJ sequence", { author: family.repeat(20), filePath: `src/${family.repeat(30)}.ts` }],
+    [
+      "CJK path and comment",
+      { filePath: `src/${"路径".repeat(30)}.ts`, comment: "日本語".repeat(30) },
+    ],
+    ["tab in comment", { comment: "a\tb\t\tc ".repeat(10) }],
+    [
+      "ANSI escape in comment",
+      { comment: "\x1b[31mred\x1b[0m \x1b[2J\x1b[H \x1b]0;pwned\x07 \x1b[999C alert ".repeat(3) },
+    ],
+  ];
+  for (const [name, overrides] of cases) {
+    for (const color of [false, true]) {
+      const output = formatPretty(makeComment(overrides), color);
+      const lines = output.split("\n");
+      const widths = lines.map((l) => stringWidth(l));
+      for (const w of widths) assert.equal(w, 55, `${name} (color=${color}):\n${output}`);
+      assert.ok(!output.includes("\t"), `${name}: tab leaked`);
+      assert.ok(!/\u200D…/.test(output), `${name}: grapheme split by truncation`);
+      // biome-ignore lint/suspicious/noControlCharactersInRegex: matches our own SGR styling
+      const withoutOurStyles = output.replace(/\x1b\[[0-9;]*m/g, "");
+      assert.ok(!withoutOurStyles.includes("\x1b"), `${name}: escape leaked`);
+      if (!color) assert.ok(!output.includes("\x1b"), `${name}: escape in plain output`);
+    }
+  }
+});
+
+test("formatPretty - escape sequences in repo data are stripped from the card", () => {
+  const output = formatPretty(makeComment({ comment: "\x1b[31mred\x1b[0m alert" }), false);
+  assert.ok(output.includes('"red alert"'), output);
+});
+
+test("formatStats - escape sequences in author and path are stripped", () => {
+  const output = formatStats(
+    [makeComment({ author: "\x1b]0;pwned\x07Eve\x1b[2J", filePath: "a\x1b[31m.ts" })],
+    false,
+  );
+  assert.ok(!output.includes("\x1b"), output);
+  assert.ok(output.includes("Most prolific night owl: Eve "), output);
+  assert.ok(output.includes("Most commented file: a.ts "), output);
 });
