@@ -139,13 +139,22 @@ export async function* readGitLog(
       }
     }
 
+    const code = await exitCode;
+    if (code !== 0) {
+      throw new Error(`git log failed: ${stderrText.trim()}`);
+    }
+
     // Flush the last commit
     const commit = flushCommit();
     if (commit) yield commit;
   } finally {
-    const code = await exitCode;
-    if (code !== 0) {
-      throw new Error(`git log failed: ${stderrText.trim()}`);
+    // If the consumer stopped early (or we are unwinding from an error),
+    // git may still be running: stop it rather than waiting on it.
+    if (child.exitCode === null && child.signalCode === null) {
+      child.kill();
+      // Wait for it to go away (ignoring how it ended) so callers can
+      // safely clean up the repo directory afterwards.
+      await exitCode.catch(() => null);
     }
   }
 }

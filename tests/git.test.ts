@@ -154,6 +154,37 @@ test("readGitLog - diff lines that look like metadata stay in the diff", async (
   );
 });
 
+test("readGitLog - stopping early does not throw", async (t) => {
+  const repo = await emptyRepo(t);
+  // A diff far larger than the pipe buffers, so git is still writing when
+  // the consumer stops reading.
+  const big = Array.from({ length: 40_000 }, (_, i) => `// line ${i} ${"x".repeat(60)}`).join("\n");
+  await writeFile(join(repo, "big.ts"), big + "\n");
+  await commitAll(repo, "big", "2023-11-14T02:00:00+00:00");
+  await writeFile(join(repo, "small.ts"), "// small\n");
+  await commitAll(repo, "small", "2023-11-15T02:00:00+00:00");
+  await writeFile(join(repo, "small2.ts"), "// small 2\n");
+  await commitAll(repo, "small2", "2023-11-16T02:00:00+00:00");
+
+  let seen = 0;
+  for await (const commit of readGitLog({ repoPath: repo })) {
+    seen++;
+    assert.ok(commit.addedLines.length > 0);
+    break;
+  }
+  assert.deepEqual(seen, 1);
+});
+
+test("readGitLog - reports git failures", async (t) => {
+  const parent = await mkdtemp(join(tmpdir(), "linus-test-"));
+  t.after(() => rm(parent, { recursive: true, force: true }));
+  await assert.rejects(async () => {
+    for await (const _ of readGitLog({ repoPath: join(parent, "missing") })) {
+      // drain
+    }
+  }, /git log failed/);
+});
+
 // --- parseAuthorDate ---
 
 test("parseAuthorDate - extracts local hour and minute", () => {
