@@ -175,6 +175,24 @@ test("readGitLog - stopping early does not throw", async (t) => {
   assert.deepEqual(seen, 1);
 });
 
+test("readGitLog - includes lines added to renamed files", async (t) => {
+  const repo = await emptyRepo(t);
+  const body = Array.from({ length: 10 }, (_, i) => `const v${i} = ${i};`).join("\n");
+  await writeFile(join(repo, "old.ts"), body + "\n");
+  await commitAll(repo, "add", "2023-11-14T02:00:00+00:00");
+  await git(repo, ["mv", "old.ts", "new.ts"]);
+  await writeFile(join(repo, "new.ts"), body + "\n// added while renaming\n");
+  await commitAll(repo, "rename", "2023-11-15T02:00:00+00:00");
+
+  const commits = [];
+  for await (const commit of readGitLog({ repoPath: repo })) commits.push(commit);
+
+  assert.deepEqual(commits.length, 2);
+  assert.deepEqual(commits[0].addedLines, [
+    { filePath: "new.ts", lineNumber: 11, content: "// added while renaming" },
+  ]);
+});
+
 test("readGitLog - reports git failures", async (t) => {
   const parent = await mkdtemp(join(tmpdir(), "linus-test-"));
   t.after(() => rm(parent, { recursive: true, force: true }));

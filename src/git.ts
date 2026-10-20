@@ -48,7 +48,8 @@ export async function* readGitLog(
     opts.repoPath,
     "log",
     `--format=${FORMAT}`,
-    "--diff-filter=AM",
+    "--diff-filter=AMR",
+    "-M",
     "-p",
     "--no-merges",
   ];
